@@ -1,0 +1,16 @@
+tu-repo/
+├── README.md
+├── backend/
+│   ├── main.py              # FastAPI app
+│   ├── rag/                 # ingesta, embeddings, retrieval
+│   ├── voice/                # STT/TTS
+│   ├── agent/                # lógica de conversación + decisión
+│   └── requirements.txt
+├── frontend/
+│   ├── admin.html            # consola de administración
+│   └── call.html             # interfaz de llamada
+├── data/                      # aquí van los xlsx/pdf del dataset (gitignored o no, decides)
+├── docs/
+│   ├── arquitectura.png       # diagrama (entregable 02)
+│   └── informe-final.md       # entregable 03
+└── .env.example

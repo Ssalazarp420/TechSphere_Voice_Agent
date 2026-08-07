@@ -1,0 +1,15 @@
+# LibreOffice/OpenOffice lock files — embed local username and LAN IP of whoever
+# has the spreadsheet open, never useful to commit.
+.~lock.*#
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Entornos virtuales y secretos
+.venv/
+.env
+.venv/
+
+# Archivos temporales
+*.log
