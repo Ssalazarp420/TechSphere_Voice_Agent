@@ -1,26 +1,26 @@
-from pathlib import Path
-
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = FastAPI(title="TechSphere Voice Agent")
 
-ROOT = Path(__file__).resolve().parent.parent
-FRONTEND_DIR = ROOT / "frontend"
-
-
+# Verifica que las API keys cargaron (no las expone, solo confirma presencia)
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "service": "TechSphere Voice Agent"}
-
+def health():
+    return {
+        "status": "ok",
+        "gemini_key_loaded": bool(os.getenv("GEMINI_API_KEY")),
+        "groq_key_loaded": bool(os.getenv("GROQ_API_KEY")),
+    }
 
 @app.get("/admin")
-def admin_page() -> HTMLResponse:
-    html = (FRONTEND_DIR / "admin.html").read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
+def admin_page():
+    return FileResponse("frontend/admin.html")
 
 @app.get("/call")
-def call_page() -> HTMLResponse:
-    html = (FRONTEND_DIR / "call.html").read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
+def call_page():
+    return FileResponse("frontend/call.html")
