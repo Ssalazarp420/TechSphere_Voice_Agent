@@ -4,20 +4,32 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import pandas as pd
-import json
 from pathlib import Path
 
 print("### IMPORTS OK ###")
 
-DATA_DIR = Path("dataset")
+ROOT_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = ROOT_DIR / "dataset"
 print(f"### Buscando en: {DATA_DIR.resolve()} ###")
 print(f"### Existe la carpeta?: {DATA_DIR.exists()} ###")
 
+
+def leer_excel_seguro(nombre_archivo: str) -> pd.DataFrame:
+    ruta = DATA_DIR / nombre_archivo
+    print(f"### Leyendo: {ruta.name} ###")
+    return pd.read_excel(ruta, sheet_name="result", dtype=str, engine="openpyxl")
+
+
+print("### Probando archivo pequeño ###")
+perfiles_clinicos = leer_excel_seguro("perfiles_clinicos_pacientes_silver_contest.xlsx")
+print("### Archivo pequeño OK ###")
+print(perfiles_clinicos.shape)
+
 # Cargar los 4 xlsx (todos con hoja "result")
-conversaciones = pd.read_excel(DATA_DIR / "dataset_final.xlsx", sheet_name="result")
-trayectorias = pd.read_excel(DATA_DIR / "trayectorias_postop_silver.xlsx", sheet_name="result")
-perfiles_clinicos = pd.read_excel(DATA_DIR / "perfiles_clinicos_pacientes_silver_contest.xlsx", sheet_name="result")
-perfiles_demo = pd.read_excel(DATA_DIR / "perfiles_pacientes_co.xlsx", sheet_name="result")
+conversaciones = leer_excel_seguro("dataset_final.xlsx")
+trayectorias = leer_excel_seguro("trayectorias_postop_silver.xlsx")
+perfiles_clinicos = leer_excel_seguro("perfiles_clinicos_pacientes_silver_contest.xlsx")
+perfiles_demo = leer_excel_seguro("perfiles_pacientes_co.xlsx")
 
 print("=== SHAPES ===")
 for name, df in [("conversaciones", conversaciones), ("trayectorias", trayectorias),
