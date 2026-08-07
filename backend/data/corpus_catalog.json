@@ -1,0 +1,971 @@
+{
+  "corpus_root": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos",
+  "total_documents": 107,
+  "text_documents": 106,
+  "scanned_documents": 1,
+  "documents": [
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Acute Appendicitis Evidence Based Medicine Guideline.pdf",
+      "category": "Appendicitis",
+      "filename": "Acute Appendicitis Evidence Based Medicine Guideline.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 14247,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Acute Care Surgery Comprehensive Recovery Guide - Appendix Surgery (Appendectomy).pdf",
+      "category": "Appendicitis",
+      "filename": "Acute Care Surgery Comprehensive Recovery Guide - Appendix Surgery (Appendectomy).pdf",
+      "pages": 2,
+      "has_text": true,
+      "text_length": 4865,
+      "extractable_pages": 2
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Adult appendicitis- Clinical practice guidelines from the French Society of Digestive Surgery and the Society of Abdominal and Digestive Imaging.pdf",
+      "category": "Appendicitis",
+      "filename": "Adult appendicitis- Clinical practice guidelines from the French Society of Digestive Surgery and the Society of Abdominal and Digestive Imaging.pdf",
+      "pages": 11,
+      "has_text": true,
+      "text_length": 13314,
+      "extractable_pages": 11
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Apendicitis aguda perforada secundaria a cuerpo extraño- reporte de caso.pdf",
+      "category": "Appendicitis",
+      "filename": "Apendicitis aguda perforada secundaria a cuerpo extraño- reporte de caso.pdf",
+      "pages": 5,
+      "has_text": true,
+      "text_length": 9913,
+      "extractable_pages": 5
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Apendicitis aguda- Hallazgos radiológicos y enfoque actual de las imágenes diagnósticas.pdf",
+      "category": "Appendicitis",
+      "filename": "Apendicitis aguda- Hallazgos radiológicos y enfoque actual de las imágenes diagnósticas.pdf",
+      "pages": 12,
+      "has_text": true,
+      "text_length": 14130,
+      "extractable_pages": 12
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Apendicitis.pdf",
+      "category": "Appendicitis",
+      "filename": "Apendicitis.pdf",
+      "pages": 12,
+      "has_text": true,
+      "text_length": 3209,
+      "extractable_pages": 12
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Appendicitis- Integrating evidence-based nursing care into clinical practice.pdf",
+      "category": "Appendicitis",
+      "filename": "Appendicitis- Integrating evidence-based nursing care into clinical practice.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 11644,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\chapter APPENDICITIS.pdf",
+      "category": "Appendicitis",
+      "filename": "chapter APPENDICITIS.pdf",
+      "pages": 1,
+      "has_text": true,
+      "text_length": 5705,
+      "extractable_pages": 1
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Complications after appendectomy in patients with treated appendicitis_ results from a retrospective study.pdf",
+      "category": "Appendicitis",
+      "filename": "Complications after appendectomy in patients with treated appendicitis_ results from a retrospective study.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 13534,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Diagnosis and Management of Acute Appendicitis in Adults A Review.pdf",
+      "category": "Appendicitis",
+      "filename": "Diagnosis and Management of Acute Appendicitis in Adults A Review.pdf",
+      "pages": 13,
+      "has_text": true,
+      "text_length": 14142,
+      "extractable_pages": 13
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\diagnóstico, tratamiento y seguimiento del paciente adulto con apendicitis aguda en el Hospital Universitario Nacional de Colombia.pdf",
+      "category": "Appendicitis",
+      "filename": "diagnóstico, tratamiento y seguimiento del paciente adulto con apendicitis aguda en el Hospital Universitario Nacional de Colombia.pdf",
+      "pages": 78,
+      "has_text": true,
+      "text_length": 2093,
+      "extractable_pages": 78
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Disease severity and postoperative complications after appendectomy.pdf",
+      "category": "Appendicitis",
+      "filename": "Disease severity and postoperative complications after appendectomy.pdf",
+      "pages": 4,
+      "has_text": true,
+      "text_length": 22571,
+      "extractable_pages": 4
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Epidemiología de la apendicitis aguda en Colombia Un análisis de las bases de datos administrativas del Ministerio de Salud.pdf",
+      "category": "Appendicitis",
+      "filename": "Epidemiología de la apendicitis aguda en Colombia Un análisis de las bases de datos administrativas del Ministerio de Salud.pdf",
+      "pages": 9,
+      "has_text": true,
+      "text_length": 9964,
+      "extractable_pages": 9
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Establishing the need for clinical follow-up after emergency appendicectomy in the modern era_ Retrospective case series of 145 patients.pdf",
+      "category": "Appendicitis",
+      "filename": "Establishing the need for clinical follow-up after emergency appendicectomy in the modern era_ Retrospective case series of 145 patients.pdf",
+      "pages": 5,
+      "has_text": true,
+      "text_length": 17150,
+      "extractable_pages": 5
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\FACTORES ASOCIADOS A LA INCIDENCIA DE APENDICITIS AGUDA COMPLICADA EN LA E.S.E. HOSPITAL UNIVERSITARIO DEL CARIBE.pdf",
+      "category": "Appendicitis",
+      "filename": "FACTORES ASOCIADOS A LA INCIDENCIA DE APENDICITIS AGUDA COMPLICADA EN LA E.S.E. HOSPITAL UNIVERSITARIO DEL CARIBE.pdf",
+      "pages": 35,
+      "has_text": true,
+      "text_length": 1550,
+      "extractable_pages": 35
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Identificación de microorganismos intrabdominales asociados a colección intrabdominal postoperatoria en niños con apendicitis perforada.pdf",
+      "category": "Appendicitis",
+      "filename": "Identificación de microorganismos intrabdominales asociados a colección intrabdominal postoperatoria en niños con apendicitis perforada.pdf",
+      "pages": 53,
+      "has_text": true,
+      "text_length": 868,
+      "extractable_pages": 46
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Management of complications after appendectomy_ Literature review.pdf",
+      "category": "Appendicitis",
+      "filename": "Management of complications after appendectomy_ Literature review.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 11559,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\PLAN DE CUIDADO EN CASA DE PACIENTE EN POSTOPERATORIO DE APENDICECTOMÍA.pdf",
+      "category": "Appendicitis",
+      "filename": "PLAN DE CUIDADO EN CASA DE PACIENTE EN POSTOPERATORIO DE APENDICECTOMÍA.pdf",
+      "pages": 1,
+      "has_text": true,
+      "text_length": 3637,
+      "extractable_pages": 1
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\POST OPERATIVE INSTRUCTIONS FOR APPENDECTOMY .pdf",
+      "category": "Appendicitis",
+      "filename": "POST OPERATIVE INSTRUCTIONS FOR APPENDECTOMY .pdf",
+      "pages": 1,
+      "has_text": true,
+      "text_length": 2622,
+      "extractable_pages": 1
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Postoperative antibiotic strategies in acute complicated appendicitis- a systematic review.pdf",
+      "category": "Appendicitis",
+      "filename": "Postoperative antibiotic strategies in acute complicated appendicitis- a systematic review.pdf",
+      "pages": 11,
+      "has_text": true,
+      "text_length": 10931,
+      "extractable_pages": 11
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Postoperative Complications Following Appendectomy- A Single-Center Retrospective Study.pdf",
+      "category": "Appendicitis",
+      "filename": "Postoperative Complications Following Appendectomy- A Single-Center Retrospective Study.pdf",
+      "pages": 12,
+      "has_text": true,
+      "text_length": 10761,
+      "extractable_pages": 12
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Postoperative Infections After Appendectomy for Acute Appendicitis_ The Surgeon’s Checklist.pdf",
+      "category": "Appendicitis",
+      "filename": "Postoperative Infections After Appendectomy for Acute Appendicitis_ The Surgeon’s Checklist.pdf",
+      "pages": 15,
+      "has_text": true,
+      "text_length": 11574,
+      "extractable_pages": 15
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\REVISIÓN DE LA LITERATURA SOBRE LAAPENDICITIS AGUDA PEDIATRICA NO ESPECIFICADA EN EL PERI000 2000-2021.pdf",
+      "category": "Appendicitis",
+      "filename": "REVISIÓN DE LA LITERATURA SOBRE LAAPENDICITIS AGUDA PEDIATRICA NO ESPECIFICADA EN EL PERI000 2000-2021.pdf",
+      "pages": 1,
+      "has_text": false,
+      "text_length": 0,
+      "extractable_pages": 0
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\Appendicitis\\Systematic Review and Meta-Analysis of Postoperative Antibiotics for Patients with a Complex Appendicitis.pdf",
+      "category": "Appendicitis",
+      "filename": "Systematic Review and Meta-Analysis of Postoperative Antibiotics for Patients with a Complex Appendicitis.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 13303,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\002-GUIA-DE-CANCER-DE-CUELLO-UTERINO.pdf",
+      "category": "breast_cancer",
+      "filename": "002-GUIA-DE-CANCER-DE-CUELLO-UTERINO.pdf",
+      "pages": 13,
+      "has_text": true,
+      "text_length": 8157,
+      "extractable_pages": 13
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\1-s2.0-S0360301625060390-main.pdf",
+      "category": "breast_cancer",
+      "filename": "1-s2.0-S0360301625060390-main.pdf",
+      "pages": 11,
+      "has_text": true,
+      "text_length": 15662,
+      "extractable_pages": 11
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\1-s2.0-S1048891X24221824-main.pdf",
+      "category": "breast_cancer",
+      "filename": "1-s2.0-S1048891X24221824-main.pdf",
+      "pages": 25,
+      "has_text": true,
+      "text_length": 16026,
+      "extractable_pages": 25
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\BOG303-Raul-Murillo.pdf",
+      "category": "breast_cancer",
+      "filename": "BOG303-Raul-Murillo.pdf",
+      "pages": 23,
+      "has_text": true,
+      "text_length": 257,
+      "extractable_pages": 23
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\cervical-es-patient.pdf",
+      "category": "breast_cancer",
+      "filename": "cervical-es-patient.pdf",
+      "pages": 76,
+      "has_text": true,
+      "text_length": 2039,
+      "extractable_pages": 76
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\cervix16nov-full.pdf",
+      "category": "breast_cancer",
+      "filename": "cervix16nov-full.pdf",
+      "pages": 86,
+      "has_text": true,
+      "text_length": 1145,
+      "extractable_pages": 86
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\curroncol-29-00755.pdf",
+      "category": "breast_cancer",
+      "filename": "curroncol-29-00755.pdf",
+      "pages": 17,
+      "has_text": true,
+      "text_length": 10856,
+      "extractable_pages": 17
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\Cáncer-de-Cuello-Uterino-mar_2022.pdf",
+      "category": "breast_cancer",
+      "filename": "Cáncer-de-Cuello-Uterino-mar_2022.pdf",
+      "pages": 4,
+      "has_text": true,
+      "text_length": 4682,
+      "extractable_pages": 4
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\Documento.pdf",
+      "category": "breast_cancer",
+      "filename": "Documento.pdf",
+      "pages": 72,
+      "has_text": true,
+      "text_length": 1689,
+      "extractable_pages": 72
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\Factors-associated-with-delays-in-time-to-treatment-initiation-in-Colombian-women-with-cervical-cancer.pdf",
+      "category": "breast_cancer",
+      "filename": "Factors-associated-with-delays-in-time-to-treatment-initiation-in-Colombian-women-with-cervical-cancer.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 20374,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\fonc-14-1461296.pdf",
+      "category": "breast_cancer",
+      "filename": "fonc-14-1461296.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 12771,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\fsurg-12-1588558.pdf",
+      "category": "breast_cancer",
+      "filename": "fsurg-12-1588558.pdf",
+      "pages": 9,
+      "has_text": true,
+      "text_length": 15435,
+      "extractable_pages": 9
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\gom226c.pdf",
+      "category": "breast_cancer",
+      "filename": "gom226c.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 9601,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\Herramientas-Tecnica-Cancer-cuello-uterino-2018.pdf",
+      "category": "breast_cancer",
+      "filename": "Herramientas-Tecnica-Cancer-cuello-uterino-2018.pdf",
+      "pages": 14,
+      "has_text": true,
+      "text_length": 1047,
+      "extractable_pages": 14
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\ijgm-18-6073.pdf",
+      "category": "breast_cancer",
+      "filename": "ijgm-18-6073.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 15105,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\Intl J Gynecology   Obste - 2025 - Bhatla - Cancer of the cervix uteri  2025 update.pdf",
+      "category": "breast_cancer",
+      "filename": "Intl J Gynecology   Obste - 2025 - Bhatla - Cancer of the cervix uteri  2025 update.pdf",
+      "pages": 22,
+      "has_text": true,
+      "text_length": 16734,
+      "extractable_pages": 22
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\main.pdf",
+      "category": "breast_cancer",
+      "filename": "main.pdf",
+      "pages": 14,
+      "has_text": true,
+      "text_length": 16897,
+      "extractable_pages": 14
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\prevencion-cancer-cuello-uterino.pdf",
+      "category": "breast_cancer",
+      "filename": "prevencion-cancer-cuello-uterino.pdf",
+      "pages": 2,
+      "has_text": true,
+      "text_length": 3775,
+      "extractable_pages": 2
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\breast_cancer\\Terapéutica+del+cáncer+de+cuello+uterino,+una+revisión+de+la+literatura.pdf",
+      "category": "breast_cancer",
+      "filename": "Terapéutica+del+cáncer+de+cuello+uterino,+una+revisión+de+la+literatura.pdf",
+      "pages": 15,
+      "has_text": true,
+      "text_length": 13114,
+      "extractable_pages": 15
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Analysis of deficiencies in care following cholecystectomy.pdf",
+      "category": "cholecystitis",
+      "filename": "Analysis of deficiencies in care following cholecystectomy.pdf",
+      "pages": 6,
+      "has_text": true,
+      "text_length": 14814,
+      "extractable_pages": 6
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Colecistectomía subtotal en patología biliar complicada.pdf",
+      "category": "cholecystitis",
+      "filename": "Colecistectomía subtotal en patología biliar complicada.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 9475,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Colelitiasis y colecistitis aguda.pdf",
+      "category": "cholecystitis",
+      "filename": "Colelitiasis y colecistitis aguda.pdf",
+      "pages": 15,
+      "has_text": true,
+      "text_length": 3229,
+      "extractable_pages": 15
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\CUIDADO ESTANDARIZADO EN EL PACIENTE QUIRURGICO CON ALTERACIONES EN LA FUNCION GASTROINTESTINAL.pdf",
+      "category": "cholecystitis",
+      "filename": "CUIDADO ESTANDARIZADO EN EL PACIENTE QUIRURGICO CON ALTERACIONES EN LA FUNCION GASTROINTESTINAL.pdf",
+      "pages": 35,
+      "has_text": true,
+      "text_length": 4657,
+      "extractable_pages": 35
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Diagnóstico y tratamiento del paciente con colecistitis aguda calculosa en el Hospital Universitario Nacional de Colombia .pdf",
+      "category": "cholecystitis",
+      "filename": "Diagnóstico y tratamiento del paciente con colecistitis aguda calculosa en el Hospital Universitario Nacional de Colombia .pdf",
+      "pages": 110,
+      "has_text": true,
+      "text_length": 3897,
+      "extractable_pages": 99
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Estándar Clínico Basado en la Evidencia- Diagnóstico y tratamiento del paciente con colecistitis aguda calculosa en el Hospital Universitario Nacional.pdf",
+      "category": "cholecystitis",
+      "filename": "Estándar Clínico Basado en la Evidencia- Diagnóstico y tratamiento del paciente con colecistitis aguda calculosa en el Hospital Universitario Nacional.pdf",
+      "pages": 60,
+      "has_text": true,
+      "text_length": 1157,
+      "extractable_pages": 58
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Evaluation of Post-cholecystectomy Syndrome in Patients With Gallstone Disease- A Critical Appraisal.pdf",
+      "category": "cholecystitis",
+      "filename": "Evaluation of Post-cholecystectomy Syndrome in Patients With Gallstone Disease- A Critical Appraisal.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 13097,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\GUIA COLECISTITIS AGUDA.pdf",
+      "category": "cholecystitis",
+      "filename": "GUIA COLECISTITIS AGUDA.pdf",
+      "pages": 3,
+      "has_text": true,
+      "text_length": 6777,
+      "extractable_pages": 3
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\How to Predict Postoperative Complications After Early Laparoscopic Cholecystectomy for Acute Cholecystitis- the Chole-Risk Score.pdf",
+      "category": "cholecystitis",
+      "filename": "How to Predict Postoperative Complications After Early Laparoscopic Cholecystectomy for Acute Cholecystitis- the Chole-Risk Score.pdf",
+      "pages": 9,
+      "has_text": true,
+      "text_length": 14451,
+      "extractable_pages": 9
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Non-programmed rehospitalizations after cholecystectomy.pdf",
+      "category": "cholecystitis",
+      "filename": "Non-programmed rehospitalizations after cholecystectomy.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 17634,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\PLAN DE CUIDADO COLECISTECTOMIA.pdf",
+      "category": "cholecystitis",
+      "filename": "PLAN DE CUIDADO COLECISTECTOMIA.pdf",
+      "pages": 5,
+      "has_text": true,
+      "text_length": 2123,
+      "extractable_pages": 5
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Post-cholecystectomy syndrome in patients undergoing laparoscopic cholecystectomy .pdf",
+      "category": "cholecystitis",
+      "filename": "Post-cholecystectomy syndrome in patients undergoing laparoscopic cholecystectomy .pdf",
+      "pages": 5,
+      "has_text": true,
+      "text_length": 14789,
+      "extractable_pages": 5
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Postcholecystectomy syndrome - management and treatment.pdf",
+      "category": "cholecystitis",
+      "filename": "Postcholecystectomy syndrome - management and treatment.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 12220,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Postoperative care for patients undergoing cholecystectomy- A comprehensive nursing review.pdf",
+      "category": "cholecystitis",
+      "filename": "Postoperative care for patients undergoing cholecystectomy- A comprehensive nursing review.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 15350,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Postoperative Outcomes Following Cholecystectomy- A Nationwide Analysis.pdf",
+      "category": "cholecystitis",
+      "filename": "Postoperative Outcomes Following Cholecystectomy- A Nationwide Analysis.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 9228,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Risk Factors Associated with Post-Cholecystectomy Syndrome and Insights into Post-Surgical Follow-Up- Retrospective Cohort Study.pdf",
+      "category": "cholecystitis",
+      "filename": "Risk Factors Associated with Post-Cholecystectomy Syndrome and Insights into Post-Surgical Follow-Up- Retrospective Cohort Study.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 12695,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\cholecystitis\\Safe postoperative outcomes following early cholecystectomy for acute calculus cholecystitis regardless of symptom onset.pdf",
+      "category": "cholecystitis",
+      "filename": "Safe postoperative outcomes following early cholecystectomy for acute calculus cholecystitis regardless of symptom onset.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 15831,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\A Guide to Enhancing Your Recovery After Bowel Surgery (ERAS).pdf",
+      "category": "colorectal cancer",
+      "filename": "A Guide to Enhancing Your Recovery After Bowel Surgery (ERAS).pdf",
+      "pages": 32,
+      "has_text": true,
+      "text_length": 3176,
+      "extractable_pages": 30
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\A Review of Postoperative Complications in Colon Cancer Surgery The Need for Patient Centered Therapy.pdf",
+      "category": "colorectal cancer",
+      "filename": "A Review of Postoperative Complications in Colon Cancer Surgery The Need for Patient Centered Therapy.pdf",
+      "pages": 16,
+      "has_text": true,
+      "text_length": 12006,
+      "extractable_pages": 16
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Actualización en la tamización del cáncer colorrectal.pdf",
+      "category": "colorectal cancer",
+      "filename": "Actualización en la tamización del cáncer colorrectal.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 12459,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Analyzing postoperative complications in colorectal cancer surgery- a systematic review enhanced by artificial intelligence.pdf",
+      "category": "colorectal cancer",
+      "filename": "Analyzing postoperative complications in colorectal cancer surgery- a systematic review enhanced by artificial intelligence.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 14708,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Colon Cancer Care Before and After Surgery.pdf",
+      "category": "colorectal cancer",
+      "filename": "Colon Cancer Care Before and After Surgery.pdf",
+      "pages": 2,
+      "has_text": true,
+      "text_length": 3747,
+      "extractable_pages": 2
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Colon Cancer Surgery and Recovery.pdf",
+      "category": "colorectal cancer",
+      "filename": "Colon Cancer Surgery and Recovery.pdf",
+      "pages": 24,
+      "has_text": true,
+      "text_length": 1110,
+      "extractable_pages": 22
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Colorectal Cancer- Postoperative Follow-up and Surveillance.pdf",
+      "category": "colorectal cancer",
+      "filename": "Colorectal Cancer- Postoperative Follow-up and Surveillance.pdf",
+      "pages": 4,
+      "has_text": true,
+      "text_length": 14012,
+      "extractable_pages": 4
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Determinación de los factores predictivos para complicaciones en cirugía electiva de pacientes con cáncer colorrectal. Experiencia del Instituto de Cancerología Las Américas Auna (Colombia, 2016-2019).pdf",
+      "category": "colorectal cancer",
+      "filename": "Determinación de los factores predictivos para complicaciones en cirugía electiva de pacientes con cáncer colorrectal. Experiencia del Instituto de Cancerología Las Américas Auna (Colombia, 2016-2019).pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 11799,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Diagnóstico, estadificación, tratamiento y seguimiento del paciente adulto con cáncer de colon en el Hospital Universitario Nacional de Colombia.pdf",
+      "category": "colorectal cancer",
+      "filename": "Diagnóstico, estadificación, tratamiento y seguimiento del paciente adulto con cáncer de colon en el Hospital Universitario Nacional de Colombia.pdf",
+      "pages": 85,
+      "has_text": true,
+      "text_length": 923,
+      "extractable_pages": 84
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\ecommendations for follow‑up of colorectal cancer survivors.pdf",
+      "category": "colorectal cancer",
+      "filename": "ecommendations for follow‑up of colorectal cancer survivors.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 14217,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Efecto de la implementación de las recomendaciones del protocolo de recuperación mejorada después de cirugía (ERAS) en cirugía colorrectal en un hospital de referencia del suroccidente colombiano.pdf",
+      "category": "colorectal cancer",
+      "filename": "Efecto de la implementación de las recomendaciones del protocolo de recuperación mejorada después de cirugía (ERAS) en cirugía colorrectal en un hospital de referencia del suroccidente colombiano.pdf",
+      "pages": 12,
+      "has_text": true,
+      "text_length": 11579,
+      "extractable_pages": 12
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Effects of comprehensive care on psychological emotions, postoperative rehabilitation and complications of colorectal cancer patients after colostomy.pdf",
+      "category": "colorectal cancer",
+      "filename": "Effects of comprehensive care on psychological emotions, postoperative rehabilitation and complications of colorectal cancer patients after colostomy.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 13200,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Experiencia en cirugía colorrectal en un hospital de cuarto nivel de complejidad en Bogotá, Colombia.pdf",
+      "category": "colorectal cancer",
+      "filename": "Experiencia en cirugía colorrectal en un hospital de cuarto nivel de complejidad en Bogotá, Colombia.pdf",
+      "pages": 6,
+      "has_text": true,
+      "text_length": 13460,
+      "extractable_pages": 6
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\GUÍA DE MANEJO PARA EL DIAGNÓSTICO, TRATAMIENTO, SEGUIMIENTO Y PALIACIÓN DEL CÁNCER DE COLON Y RECTO.pdf",
+      "category": "colorectal cancer",
+      "filename": "GUÍA DE MANEJO PARA EL DIAGNÓSTICO, TRATAMIENTO, SEGUIMIENTO Y PALIACIÓN DEL CÁNCER DE COLON Y RECTO.pdf",
+      "pages": 269,
+      "has_text": true,
+      "text_length": 1179,
+      "extractable_pages": 269
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Health self-management experiences of colorectal cancer patients in postoperative recovery- A qualitative study.pdf",
+      "category": "colorectal cancer",
+      "filename": "Health self-management experiences of colorectal cancer patients in postoperative recovery- A qualitative study.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 18865,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Post-operative Surveillance Following Curative Resection of Colorectal Cancer in the Elderly Population in the United Kingdom- An Observational Study.pdf",
+      "category": "colorectal cancer",
+      "filename": "Post-operative Surveillance Following Curative Resection of Colorectal Cancer in the Elderly Population in the United Kingdom- An Observational Study.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 9005,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Programa de automanejo en adultos con cáncer colorrectal- estudio piloto.pdf",
+      "category": "colorectal cancer",
+      "filename": "Programa de automanejo en adultos con cáncer colorrectal- estudio piloto.pdf",
+      "pages": 17,
+      "has_text": true,
+      "text_length": 3154,
+      "extractable_pages": 17
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Protocolo de recuperación mejorada después de cirugía (ERAS) atenúa el estrés y acelera la recuperación en pacientes después de resección radical por cáncer colorrectal- Experiencia en la Clínica Universitaria Colombia.pdf",
+      "category": "colorectal cancer",
+      "filename": "Protocolo de recuperación mejorada después de cirugía (ERAS) atenúa el estrés y acelera la recuperación en pacientes después de resección radical por cáncer colorrectal- Experiencia en la Clínica Universitaria Colombia.pdf",
+      "pages": 13,
+      "has_text": true,
+      "text_length": 11751,
+      "extractable_pages": 13
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Recommendations for follow‑up of colorectal cancer survivors.pdf",
+      "category": "colorectal cancer",
+      "filename": "Recommendations for follow‑up of colorectal cancer survivors.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 14113,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Remote Follow‐Up After Colorectal Cancer Surgery- A Systematic Review.pdf",
+      "category": "colorectal cancer",
+      "filename": "Remote Follow‐Up After Colorectal Cancer Surgery- A Systematic Review.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 12190,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Supervised Home-Based Exercise Intervention in Colorectal Cancer Patients Following Surgery- A Feasibility Study.pdf",
+      "category": "colorectal cancer",
+      "filename": "Supervised Home-Based Exercise Intervention in Colorectal Cancer Patients Following Surgery- A Feasibility Study.pdf",
+      "pages": 26,
+      "has_text": true,
+      "text_length": 11878,
+      "extractable_pages": 26
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Supervivencia de cáncer colorrectal en un centro oncológico de Colombia. Estudio de cohorte histórica.pdf",
+      "category": "colorectal cancer",
+      "filename": "Supervivencia de cáncer colorrectal en un centro oncológico de Colombia. Estudio de cohorte histórica.pdf",
+      "pages": 11,
+      "has_text": true,
+      "text_length": 15199,
+      "extractable_pages": 11
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\The clinical impacts of postoperative complications after colon cancer surgery for the clinical course of adjuvant treatment and survival.pdf",
+      "category": "colorectal cancer",
+      "filename": "The clinical impacts of postoperative complications after colon cancer surgery for the clinical course of adjuvant treatment and survival.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 10945,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\The Role of Postoperative Surveillance in Colorectal Cancer.pdf",
+      "category": "colorectal cancer",
+      "filename": "The Role of Postoperative Surveillance in Colorectal Cancer.pdf",
+      "pages": 6,
+      "has_text": true,
+      "text_length": 11572,
+      "extractable_pages": 6
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\colorectal cancer\\Your Follow-up Care after Colorectal Cancer.pdf",
+      "category": "colorectal cancer",
+      "filename": "Your Follow-up Care after Colorectal Cancer.pdf",
+      "pages": 4,
+      "has_text": true,
+      "text_length": 4887,
+      "extractable_pages": 4
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Artroplastia total de rodilla- vías de abordaje pararrotuliana medial y ampliada.pdf",
+      "category": "total joint replacement",
+      "filename": "Artroplastia total de rodilla- vías de abordaje pararrotuliana medial y ampliada.pdf",
+      "pages": 12,
+      "has_text": true,
+      "text_length": 13841,
+      "extractable_pages": 12
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Artroplastía total de rodilla- grado de funcionalidad postoperatoria en adultos.pdf",
+      "category": "total joint replacement",
+      "filename": "Artroplastía total de rodilla- grado de funcionalidad postoperatoria en adultos.pdf",
+      "pages": 5,
+      "has_text": true,
+      "text_length": 13213,
+      "extractable_pages": 5
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Care dependency and postoperative recovery after total knee arthroplasty a cross-sectional study.pdf",
+      "category": "total joint replacement",
+      "filename": "Care dependency and postoperative recovery after total knee arthroplasty a cross-sectional study.pdf",
+      "pages": 11,
+      "has_text": true,
+      "text_length": 16264,
+      "extractable_pages": 11
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Eficacia de diferentes técnicas de analgesiamultimodal para la prevención de dolormoderado a severo en reemplazo totalprimario de rodilla.pdf",
+      "category": "total joint replacement",
+      "filename": "Eficacia de diferentes técnicas de analgesiamultimodal para la prevención de dolormoderado a severo en reemplazo totalprimario de rodilla.pdf",
+      "pages": 9,
+      "has_text": true,
+      "text_length": 15551,
+      "extractable_pages": 9
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Enhanced recovery after surgery (ERAS) protocols for total joint replacement surgery.pdf",
+      "category": "total joint replacement",
+      "filename": "Enhanced recovery after surgery (ERAS) protocols for total joint replacement surgery.pdf",
+      "pages": 6,
+      "has_text": true,
+      "text_length": 16678,
+      "extractable_pages": 6
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Enhanced recovery after surgery in patients after hip and knee arthroplasty- a systematic review and meta-analysis.pdf",
+      "category": "total joint replacement",
+      "filename": "Enhanced recovery after surgery in patients after hip and knee arthroplasty- a systematic review and meta-analysis.pdf",
+      "pages": 15,
+      "has_text": true,
+      "text_length": 20083,
+      "extractable_pages": 15
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\FACTORES ASOCIADOS CON LA INSATISFACCIÓN DE LOS PACIENTES EN LOS RESULTADOS QUIRÚRGICOS DE REEMPLAZO TOTAL DE RODILLA A LOS 3 Y 6 MESES POSOPERATORIOS..pdf",
+      "category": "total joint replacement",
+      "filename": "FACTORES ASOCIADOS CON LA INSATISFACCIÓN DE LOS PACIENTES EN LOS RESULTADOS QUIRÚRGICOS DE REEMPLAZO TOTAL DE RODILLA A LOS 3 Y 6 MESES POSOPERATORIOS..pdf",
+      "pages": 89,
+      "has_text": true,
+      "text_length": 5536,
+      "extractable_pages": 89
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Impact of Outpatient Total Joint Replacement on Postoperative Outcomes.pdf",
+      "category": "total joint replacement",
+      "filename": "Impact of Outpatient Total Joint Replacement on Postoperative Outcomes.pdf",
+      "pages": 10,
+      "has_text": true,
+      "text_length": 9216,
+      "extractable_pages": 10
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\MANEJO DE LAS COMPLICACIONES DE POSTOPERATORIO DE REEMPLAZO DE CADERA A TRAVÉS DE LA TELEMEDICINA.pdf",
+      "category": "total joint replacement",
+      "filename": "MANEJO DE LAS COMPLICACIONES DE POSTOPERATORIO DE REEMPLAZO DE CADERA A TRAVÉS DE LA TELEMEDICINA.pdf",
+      "pages": 18,
+      "has_text": true,
+      "text_length": 5004,
+      "extractable_pages": 18
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\ncidence and timing of postoperative complications after total hip and knee arthroplasty.pdf",
+      "category": "total joint replacement",
+      "filename": "ncidence and timing of postoperative complications after total hip and knee arthroplasty.pdf",
+      "pages": 6,
+      "has_text": true,
+      "text_length": 14852,
+      "extractable_pages": 6
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Niveles de dolor, rigidez y funcionalidad en reemplazo primario de rodilla o cadera- en un Hospital de alta complejidad de Manizales (Caldas), 2023.pdf",
+      "category": "total joint replacement",
+      "filename": "Niveles de dolor, rigidez y funcionalidad en reemplazo primario de rodilla o cadera- en un Hospital de alta complejidad de Manizales (Caldas), 2023.pdf",
+      "pages": 51,
+      "has_text": true,
+      "text_length": 1240,
+      "extractable_pages": 51
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Orthopaedic Surgery - 2019 - Li - Postoperative Pain Management in Total Knee Arthroplasty.pdf",
+      "category": "total joint replacement",
+      "filename": "Orthopaedic Surgery - 2019 - Li - Postoperative Pain Management in Total Knee Arthroplasty.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 12215,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\PLAN CASERO REEMPLAZO TOTAL DE RODILLA.pdf",
+      "category": "total joint replacement",
+      "filename": "PLAN CASERO REEMPLAZO TOTAL DE RODILLA.pdf",
+      "pages": 8,
+      "has_text": true,
+      "text_length": 1619,
+      "extractable_pages": 8
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Postoperative Pain Management in Total Knee Arthroplasty.pdf",
+      "category": "total joint replacement",
+      "filename": "Postoperative Pain Management in Total Knee Arthroplasty.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 11527,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Pre- and Post-Operative Rehabilitation Interventions in Patients at Risk of Poor Outcomes Following Knee or Hip Arthroplasty- Protocol for Two Systematic Reviews.pdf",
+      "category": "total joint replacement",
+      "filename": "Pre- and Post-Operative Rehabilitation Interventions in Patients at Risk of Poor Outcomes Following Knee or Hip Arthroplasty- Protocol for Two Systematic Reviews.pdf",
+      "pages": 7,
+      "has_text": true,
+      "text_length": 13661,
+      "extractable_pages": 7
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\PROGRAMA DE PROFUNDIZACIÓN Y ENTRENAMIENTO AVANZADO EN REEMPLAZO ARTICULAR.pdf",
+      "category": "total joint replacement",
+      "filename": "PROGRAMA DE PROFUNDIZACIÓN Y ENTRENAMIENTO AVANZADO EN REEMPLAZO ARTICULAR.pdf",
+      "pages": 9,
+      "has_text": true,
+      "text_length": 3382,
+      "extractable_pages": 9
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Recom endaciones Programa Reemplazo Articular de Rodilla.pdf",
+      "category": "total joint replacement",
+      "filename": "Recom endaciones Programa Reemplazo Articular de Rodilla.pdf",
+      "pages": 12,
+      "has_text": true,
+      "text_length": 2771,
+      "extractable_pages": 12
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Recovery and the use of postoperative physical therapy after total hip or knee replacement.pdf",
+      "category": "total joint replacement",
+      "filename": "Recovery and the use of postoperative physical therapy after total hip or knee replacement.pdf",
+      "pages": 14,
+      "has_text": true,
+      "text_length": 14559,
+      "extractable_pages": 14
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Reemplazo total de cadera Guía para el paciente .pdf",
+      "category": "total joint replacement",
+      "filename": "Reemplazo total de cadera Guía para el paciente .pdf",
+      "pages": 28,
+      "has_text": true,
+      "text_length": 4190,
+      "extractable_pages": 26
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Reemplazo total de Cadera Guía para pacientes y cuidadores El camino hacia su recuperación.pdf",
+      "category": "total joint replacement",
+      "filename": "Reemplazo total de Cadera Guía para pacientes y cuidadores El camino hacia su recuperación.pdf",
+      "pages": 55,
+      "has_text": true,
+      "text_length": 1282,
+      "extractable_pages": 55
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\Total Hip Arthroplasty in Patients with BMI ≥ 30 kg_m2.pdf",
+      "category": "total joint replacement",
+      "filename": "Total Hip Arthroplasty in Patients with BMI ≥ 30 kg_m2.pdf",
+      "pages": 14,
+      "has_text": true,
+      "text_length": 9849,
+      "extractable_pages": 14
+    },
+    {
+      "path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\dataset\\textos\\total joint replacement\\What’s important for recovery after a total knee replacement_ A systematic review of mixed methods studies.pdf",
+      "category": "total joint replacement",
+      "filename": "What’s important for recovery after a total knee replacement_ A systematic review of mixed methods studies.pdf",
+      "pages": 9,
+      "has_text": true,
+      "text_length": 14051,
+      "extractable_pages": 9
+    }
+  ]
+}

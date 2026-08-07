@@ -5,19 +5,326 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Consola de administración</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 2rem; }
-      .card { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; max-width: 700px; }
+      :root {
+        --bg: #09111f;
+        --panel: rgba(15, 24, 42, 0.9);
+        --panel-2: rgba(20, 31, 54, 0.95);
+        --line: rgba(132, 155, 186, 0.18);
+        --text: #ecf2ff;
+        --muted: #9cb0cc;
+        --accent: #3ddc97;
+        --accent-2: #59a6ff;
+        --danger: #ff6b7a;
+        --warning: #ffd166;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(61, 220, 151, 0.16), transparent 35%),
+          radial-gradient(circle at top right, rgba(89, 166, 255, 0.18), transparent 32%),
+          linear-gradient(180deg, #07101d 0%, #0b1424 40%, #09111f 100%);
+      }
+
+      .shell {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 20px 56px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+        backdrop-filter: blur(14px);
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        line-height: 0.95;
+        margin-bottom: 12px;
+      }
+
+      .lede { color: var(--muted); max-width: 70ch; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 0.92rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 20px;
+      }
+
+      .span-7 { grid-column: span 7; }
+      .span-5 { grid-column: span 5; }
+      .span-12 { grid-column: span 12; }
+
+      label { display: block; font-size: 0.92rem; color: var(--muted); margin-bottom: 8px; }
+      input, textarea, button {
+        font: inherit;
+      }
+      input, textarea {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+        padding: 12px 14px;
+        outline: none;
+      }
+      textarea { min-height: 130px; resize: vertical; }
+      input:focus, textarea:focus { border-color: rgba(61, 220, 151, 0.55); }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: end;
+      }
+
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+      button {
+        border: 0;
+        border-radius: 14px;
+        padding: 12px 16px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .primary { background: linear-gradient(135deg, var(--accent), #1fcf7a); color: #081019; }
+      .secondary { background: rgba(89, 166, 255, 0.16); color: var(--text); border: 1px solid rgba(89, 166, 255, 0.35); }
+      .danger { background: rgba(255, 107, 122, 0.14); color: #ffd9de; border: 1px solid rgba(255, 107, 122, 0.35); }
+
+      .status {
+        padding: 10px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        margin-top: 12px;
+      }
+
+      .list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .doc {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.035);
+        display: grid;
+        gap: 8px;
+      }
+
+      .doc-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .meta { color: var(--muted); font-size: 0.92rem; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+      .available { background: rgba(61, 220, 151, 0.14); color: #9af3c8; }
+      .processing { background: rgba(255, 209, 102, 0.14); color: #ffe29b; }
+      .error { background: rgba(255, 107, 122, 0.14); color: #ffb5be; }
+
+      .hint { color: var(--muted); font-size: 0.9rem; }
+      .hidden { display: none; }
+
+      @media (max-width: 900px) {
+        .hero, .span-7, .span-5 { grid-template-columns: 1fr; grid-column: span 12; }
+        .row { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
-    <div class="card">
-      <h1>Consola de administración</h1>
-      <p>Esta vista será el back-office del agente de voz.</p>
-      <ul>
-        <li>Subir documentos al conocimiento</li>
-        <li>Listar documentos procesados</li>
-        <li>Eliminar documentos y actualizar el RAG</li>
-      </ul>
+    <div class="shell">
+      <div class="hero">
+        <section class="card">
+          <p class="hint">TechSphere Voice Agent · consola viva de conocimiento</p>
+          <h1>Gestiona el corpus clínico desde una sola vista.</h1>
+          <p class="lede">Sube un documento, verifica que quedó procesado y elimínalo cuando deba olvidarse. La consola habla con el backend y actualiza el índice en caliente.</p>
+          <div class="chips">
+            <span class="chip">Subir documento</span>
+            <span class="chip">Listar documentos</span>
+            <span class="chip">Eliminar documento</span>
+            <span class="chip">Procesado y disponible</span>
+          </div>
+        </section>
+
+        <aside class="card">
+          <h3>Estado</h3>
+          <div id="statusBox" class="status">Cargando estado del índice...</div>
+          <div class="hint" style="margin-top: 12px;">
+            La interfaz acepta PDFs o TXT. Los PDFs escaneados se rechazan porque aún no hay OCR.
+          </div>
+        </aside>
+      </div>
+
+      <div class="grid">
+        <section class="card span-5">
+          <h2>Subir documento</h2>
+          <form id="uploadForm">
+            <label for="fileInput">Archivo</label>
+            <input id="fileInput" name="file" type="file" accept=".pdf,.txt" />
+            <div class="actions" style="margin-top: 14px;">
+              <button class="primary" type="submit">Procesar y guardar</button>
+              <button class="secondary" type="button" id="refreshButton">Actualizar lista</button>
+            </div>
+          </form>
+          <div id="uploadMessage" class="status hidden"></div>
+        </section>
+
+        <section class="card span-7">
+          <div class="row">
+            <div>
+              <h2 style="margin-bottom: 6px;">Documentos administrados</h2>
+              <p class="hint">Cada registro muestra su estado visible para la compuerta G5.</p>
+            </div>
+            <div class="actions">
+              <button class="secondary" type="button" id="reloadButton">Recargar</button>
+            </div>
+          </div>
+          <div id="documentsList" class="list" style="margin-top: 16px;"></div>
+        </section>
+      </div>
     </div>
+
+    <script>
+      const statusBox = document.getElementById('statusBox');
+      const documentsList = document.getElementById('documentsList');
+      const uploadForm = document.getElementById('uploadForm');
+      const fileInput = document.getElementById('fileInput');
+      const uploadMessage = document.getElementById('uploadMessage');
+      const refreshButton = document.getElementById('refreshButton');
+      const reloadButton = document.getElementById('reloadButton');
+
+      const showMessage = (message, kind = 'available') => {
+        uploadMessage.textContent = message;
+        uploadMessage.className = `status ${kind}`;
+        uploadMessage.classList.remove('hidden');
+      };
+
+      const formatDate = (value) => new Date(value).toLocaleString('es-CO');
+
+      async function loadStatus() {
+        const response = await fetch('/rag/status');
+        const data = await response.json();
+        statusBox.innerHTML = `
+          <strong>${data.indexed_chunks}</strong> fragmentos indexados<br />
+          ${data.text_documents} documentos con texto · ${data.scanned_documents} escaneados<br />
+          ${data.catalog_exists ? 'Catálogo disponible' : 'Catálogo no encontrado'}
+        `;
+      }
+
+      async function loadDocuments() {
+        const response = await fetch('/admin/documents');
+        const data = await response.json();
+        documentsList.innerHTML = '';
+
+        if (!data.documents.length) {
+          documentsList.innerHTML = '<div class="status">Todavía no hay documentos administrados.</div>';
+          return;
+        }
+
+        for (const document of data.documents) {
+          const element = document.createElement('article');
+          element.className = 'doc';
+          element.innerHTML = `
+            <div class="doc-header">
+              <div>
+                <h3 style="margin-bottom: 4px;">${document.filename}</h3>
+                <div class="meta">${document.chunk_count} fragmentos · ${document.pages} páginas · ${document.category}</div>
+              </div>
+              <span class="badge available">${document.status}</span>
+            </div>
+            <div class="meta">Creado: ${formatDate(document.created_at)} · Actualizado: ${formatDate(document.updated_at)}</div>
+            <div class="actions">
+              <button class="danger" type="button" data-delete="${document.document_id}">Eliminar</button>
+            </div>
+          `;
+          documentsList.appendChild(element);
+        }
+
+        document.querySelectorAll('[data-delete]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const documentId = button.getAttribute('data-delete');
+            if (!confirm('¿Eliminar este documento del conocimiento vivo?')) return;
+            const response = await fetch(`/admin/documents/${documentId}`, { method: 'DELETE' });
+            const result = await response.json();
+            showMessage(`Documento eliminado: ${result.filename}`, 'processing');
+            await loadStatus();
+            await loadDocuments();
+          });
+        });
+      }
+
+      uploadForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const file = fileInput.files[0];
+        if (!file) {
+          showMessage('Selecciona un archivo primero.', 'error');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/admin/documents', { method: 'POST', body: formData });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          showMessage(payload.detail || 'No se pudo procesar el documento.', 'error');
+          return;
+        }
+
+        showMessage(`Documento procesado y disponible: ${payload.filename} (${payload.chunk_count} fragmentos)`, 'available');
+        fileInput.value = '';
+        await loadStatus();
+        await loadDocuments();
+      });
+
+      refreshButton.addEventListener('click', loadDocuments);
+      reloadButton.addEventListener('click', async () => {
+        await loadStatus();
+        await loadDocuments();
+      });
+
+      (async () => {
+        await loadStatus();
+        await loadDocuments();
+      })();
+    </script>
   </body>
 </html>

@@ -5,16 +5,337 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Interfaz de llamada</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 2rem; }
-      .card { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; max-width: 700px; }
-      button { padding: 0.7rem 1rem; margin-top: 1rem; }
+      :root {
+        --bg: #07111f;
+        --panel: rgba(14, 23, 41, 0.92);
+        --panel-2: rgba(19, 31, 54, 0.96);
+        --line: rgba(132, 155, 186, 0.16);
+        --text: #eef4ff;
+        --muted: #9dafc8;
+        --accent: #4ed6a7;
+        --accent-2: #6ea8ff;
+        --danger: #ff7b8a;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(78, 214, 167, 0.14), transparent 32%),
+          radial-gradient(circle at right top, rgba(110, 168, 255, 0.2), transparent 30%),
+          linear-gradient(180deg, #07111f 0%, #091423 100%);
+      }
+
+      .shell { max-width: 1200px; margin: 0 auto; padding: 28px 18px 56px; }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: 0 26px 60px rgba(0, 0, 0, 0.34);
+        backdrop-filter: blur(12px);
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { font-size: clamp(2rem, 4vw, 3.4rem); line-height: 0.95; margin-bottom: 10px; }
+      .lede { color: var(--muted); max-width: 66ch; }
+      .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
+      .span-7 { grid-column: span 7; }
+      .span-5 { grid-column: span 5; }
+      .span-12 { grid-column: span 12; }
+      .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 0.92rem;
+      }
+
+      label { display: block; font-size: 0.92rem; color: var(--muted); margin-bottom: 8px; }
+      input, textarea, button { font: inherit; }
+      input, textarea {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+        padding: 12px 14px;
+        outline: none;
+      }
+      input:focus, textarea:focus { border-color: rgba(78, 214, 167, 0.5); }
+      textarea { min-height: 120px; resize: vertical; }
+
+      button {
+        border: 0;
+        border-radius: 14px;
+        padding: 12px 16px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .primary { background: linear-gradient(135deg, var(--accent), #21d17f); color: #07111b; }
+      .secondary { background: rgba(110, 168, 255, 0.16); color: var(--text); border: 1px solid rgba(110, 168, 255, 0.35); }
+      .danger { background: rgba(255, 123, 138, 0.16); color: #ffd9de; border: 1px solid rgba(255, 123, 138, 0.38); }
+      .ghost { background: rgba(255,255,255,0.04); color: var(--text); border: 1px solid var(--line); }
+
+      .status {
+        margin-top: 12px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        background: rgba(255,255,255,0.04);
+      }
+      .hidden { display: none; }
+
+      .conversation {
+        display: grid;
+        gap: 12px;
+        max-height: 510px;
+        overflow: auto;
+        padding-right: 6px;
+      }
+      .bubble {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        max-width: 86%;
+        line-height: 1.5;
+      }
+      .user { background: rgba(110,168,255,0.14); margin-left: auto; }
+      .assistant { background: rgba(78,214,167,0.12); }
+      .system { background: rgba(255,255,255,0.05); max-width: 100%; color: var(--muted); }
+
+      .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .small { font-size: 0.9rem; color: var(--muted); }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+      .red { background: rgba(255, 123, 138, 0.16); color: #ffbcc4; }
+      .yellow { background: rgba(255, 209, 102, 0.16); color: #ffe59e; }
+      .green { background: rgba(78, 214, 167, 0.16); color: #bcffe4; }
+
+      @media (max-width: 900px) {
+        .hero, .span-7, .span-5 { grid-template-columns: 1fr; grid-column: span 12; }
+      }
     </style>
   </head>
   <body>
-    <div class="card">
-      <h1>Interfaz de llamada</h1>
-      <p>Este espacio será la vista de producción para iniciar una llamada y conversar con el agente.</p>
-      <button>Iniciar llamada</button>
+    <div class="shell">
+      <div class="hero">
+        <section class="card">
+          <p class="small">TechSphere Voice Agent · interfaz de llamada</p>
+          <h1>Habla con el agente y escucha la respuesta.</h1>
+          <p class="lede">Esta versión ya conversa con el backend, recupera conocimiento del corpus y toma una decisión preliminar de escalamiento. Si el navegador lo permite, también puede usar reconocimiento y síntesis de voz.</p>
+          <div class="chip-row">
+            <span class="chip">Micrófono opcional</span>
+            <span class="chip">Respuesta hablada</span>
+            <span class="chip">RAG con trazabilidad</span>
+            <span class="chip">Escalamiento preliminar</span>
+          </div>
+        </section>
+
+        <aside class="card">
+          <h3>Estado de llamada</h3>
+          <div id="callStatus" class="status">Listo para iniciar.</div>
+          <div class="toolbar" style="margin-top: 12px;">
+            <button class="primary" id="startCallBtn">Iniciar llamada</button>
+            <button class="secondary" id="voiceToggleBtn">Activar voz</button>
+            <button class="ghost" id="stopVoiceBtn">Detener voz</button>
+          </div>
+          <p class="small" style="margin-top: 12px;">La voz usa las capacidades del navegador; si no están disponibles, puedes escribir el turno manualmente.</p>
+        </aside>
+      </div>
+
+      <div class="grid">
+        <section class="card span-7">
+          <h2>Conversación</h2>
+          <div id="conversation" class="conversation" aria-live="polite"></div>
+        </section>
+
+        <section class="card span-5">
+          <h2>Turno actual</h2>
+          <label for="utteranceInput">Texto del paciente</label>
+          <textarea id="utteranceInput" placeholder="Ej: Me duele bastante el abdomen, tengo fiebre y la herida huele raro."></textarea>
+          <div class="toolbar" style="margin-top: 14px;">
+            <button class="primary" id="sendBtn">Enviar turno</button>
+            <button class="secondary" id="micBtn">Usar micrófono</button>
+          </div>
+          <div id="decisionBox" class="status hidden"></div>
+          <div class="status" id="referencesBox" style="margin-top: 12px;">
+            Aún no hay referencias recuperadas.
+          </div>
+        </section>
+      </div>
     </div>
+
+    <script>
+      const conversation = document.getElementById('conversation');
+      const utteranceInput = document.getElementById('utteranceInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const micBtn = document.getElementById('micBtn');
+      const startCallBtn = document.getElementById('startCallBtn');
+      const voiceToggleBtn = document.getElementById('voiceToggleBtn');
+      const stopVoiceBtn = document.getElementById('stopVoiceBtn');
+      const callStatus = document.getElementById('callStatus');
+      const decisionBox = document.getElementById('decisionBox');
+      const referencesBox = document.getElementById('referencesBox');
+
+      let voiceEnabled = true;
+      let speechRecognition = null;
+      const synth = window.speechSynthesis;
+
+      const addBubble = (role, text, extra = '') => {
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${role}`;
+        bubble.innerHTML = `<strong>${role === 'user' ? 'Paciente' : role === 'assistant' ? 'Agente' : 'Sistema'}:</strong> ${text}${extra ? `<div class="small" style="margin-top: 8px;">${extra}</div>` : ''}`;
+        conversation.appendChild(bubble);
+        conversation.scrollTop = conversation.scrollHeight;
+      };
+
+      const speak = (text) => {
+        if (!voiceEnabled || !synth) return;
+        synth.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'es-CO';
+        utterance.rate = 1.02;
+        utterance.pitch = 1;
+        synth.speak(utterance);
+      };
+
+      const renderDecision = (decision) => {
+        const label = decision.label;
+        const badgeClass = label === 'rojo' ? 'red' : label === 'amarillo' ? 'yellow' : 'green';
+        decisionBox.className = `status`;
+        decisionBox.innerHTML = `
+          <span class="badge ${badgeClass}">${label}</span>
+          <div style="margin-top: 8px;">${decision.rationale}</div>
+          <div class="small" style="margin-top: 6px;">Puntaje: ${decision.score} · Red flags: ${(decision.red_flags || []).join(', ') || 'ninguna'}</div>
+        `;
+        decisionBox.classList.remove('hidden');
+      };
+
+      const renderReferences = (references) => {
+        if (!references || !references.length) {
+          referencesBox.textContent = 'No se recuperaron referencias.';
+          return;
+        }
+
+        const lines = references.slice(0, 3).map((ref, index) => {
+          const meta = ref.metadata || {};
+          return `${index + 1}. ${meta.filename || 'fuente'} · ${meta.category || 'sin categoría'} · distancia ${Number(ref.distance).toFixed(3)}`;
+        });
+        referencesBox.innerHTML = `<strong>Referencias:</strong><br>${lines.join('<br>')}`;
+      };
+
+      async function startCall() {
+        const response = await fetch('/call/start');
+        const data = await response.json();
+        addBubble('assistant', data.assistant_text, 'Inicio de llamada');
+        speak(data.assistant_text);
+        callStatus.textContent = 'Llamada iniciada.';
+      }
+
+      async function sendTurn(text) {
+        const cleanText = text.trim();
+        if (!cleanText) return;
+
+        addBubble('user', cleanText);
+        utteranceInput.value = '';
+        callStatus.textContent = 'Procesando turno...';
+
+        const response = await fetch('/call/turn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ utterance: cleanText }),
+        });
+
+        const payload = await response.json();
+        addBubble('assistant', payload.assistant_text, payload.decision ? `Decisión: ${payload.decision.label}` : '');
+        renderDecision(payload.decision);
+        renderReferences(payload.references);
+        speak(payload.assistant_text);
+        callStatus.textContent = payload.escalation_required ? 'Escalamiento requerido.' : 'Turno atendido.';
+      }
+
+      function startMic() {
+        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Recognition) {
+          callStatus.textContent = 'Tu navegador no soporta reconocimiento de voz. Usa el texto manual.';
+          return;
+        }
+
+        if (speechRecognition) {
+          speechRecognition.stop();
+        }
+
+        speechRecognition = new Recognition();
+        speechRecognition.lang = 'es-CO';
+        speechRecognition.interimResults = false;
+        speechRecognition.maxAlternatives = 1;
+
+        speechRecognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          utteranceInput.value = transcript;
+          sendTurn(transcript);
+        };
+
+        speechRecognition.onerror = () => {
+          callStatus.textContent = 'No se pudo iniciar el micrófono.';
+        };
+
+        speechRecognition.onstart = () => {
+          callStatus.textContent = 'Escuchando...';
+        };
+
+        speechRecognition.onend = () => {
+          if (callStatus.textContent === 'Escuchando...') {
+            callStatus.textContent = 'Micrófono detenido.';
+          }
+        };
+
+        speechRecognition.start();
+      }
+
+      sendBtn.addEventListener('click', () => sendTurn(utteranceInput.value));
+      micBtn.addEventListener('click', startMic);
+      startCallBtn.addEventListener('click', startCall);
+      voiceToggleBtn.addEventListener('click', () => {
+        voiceEnabled = !voiceEnabled;
+        voiceToggleBtn.textContent = voiceEnabled ? 'Activar voz' : 'Voz activa';
+        callStatus.textContent = voiceEnabled ? 'Voz activada.' : 'Voz desactivada.';
+        if (!voiceEnabled) synth?.cancel?.();
+      });
+      stopVoiceBtn.addEventListener('click', () => {
+        synth?.cancel?.();
+        callStatus.textContent = 'Síntesis de voz detenida.';
+      });
+
+      utteranceInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          sendTurn(utteranceInput.value);
+        }
+      });
+
+      addBubble('system', 'Pulsa iniciar llamada para recibir el saludo del agente.');
+    </script>
   </body>
 </html>

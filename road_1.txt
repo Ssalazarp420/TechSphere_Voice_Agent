@@ -1,0 +1,22 @@
+Hoja de ruta general (vista de pájaro)
+Fase	Qué se hace	Compuerta/criterio relacionado
+0. Setup	Elegir stack, crear repo, estructura de carpetas	G1, G2
+1. Datos	Explorar y entender el dataset (joins, capas, PDFs)	Base para todo
+2. RAG	Ingestar corpus, embeddings, vector DB, trazabilidad	20 pts RAG
+3. Lógica de decisión	Clasificación verde/amarillo/rojo, escalamiento	20 pts decisión
+4. Voz	STT + LLM + TTS en tiempo real	G4, 15 pts voz
+5. Consola admin	Subir/listar/eliminar documentos en caliente	G5
+6. Interfaz de llamada	UI en navegador para hablar con el agente	G4
+7. Observabilidad	Logs, métricas (latencia, tokens, costo)	15 pts repo
+8. Entregables	Diagrama, informe, video	15 pts video
+
+
+Stack concreto propuesto:
+
+Pieza	Herramienta	Por qué
+LLM	Gemini 1.5 Flash	Ya elegido — 1M contexto, útil para RAG con mucho material
+STT	Groq Whisper Large V3	Gratis, rapidísimo, no compite con tu LLM (son proveedores distintos)
+TTS	Kokoro-82M o Piper (español)	Local, gratis, buena calidad
+RAG	ChromaDB + BGE-M3	Local, gratis, embeddings fuertes en español
+Backend	FastAPI (Python)	WebSockets nativos para streaming de audio
+Frontend	HTML/JS simple (Web Audio API)
