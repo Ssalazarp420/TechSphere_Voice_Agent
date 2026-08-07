@@ -13,3 +13,8 @@ __pycache__/
 
 # Archivos temporales
 *.log
+
+# Artefactos generados por el proyecto
+backend/data/call_sessions.json
+backend/data/metrics_snapshot.json
+backend/data/smoke_test_report.json

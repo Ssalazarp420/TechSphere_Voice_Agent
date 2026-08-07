@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from backend.decision.rules import classify_report
-from backend.llm.service import GeminiResponder
+from backend.llm.service import GeminiResponder, LLMResponse
 from backend.rag.store import CorpusVectorStore
 
 
@@ -15,6 +15,8 @@ class CallTurnResult:
     decision: dict[str, object]
     references: list[dict[str, object]]
     escalation_required: bool
+    llm_model: str
+    used_remote_model: bool
 
 
 class CallOrchestrator:
@@ -34,10 +36,15 @@ class CallOrchestrator:
         }
 
     def respond(self, user_text: str, limit: int = 3) -> dict[str, object]:
+        remote_prompt = None
         decision = classify_report(user_text)
         references = self.store.search(user_text, limit=limit)
 
-        assistant_text = self._compose_response(user_text=user_text, decision=decision, references=references)
+        assistant_text, llm_model, used_remote_model = self._compose_response(
+            user_text=user_text,
+            decision=decision,
+            references=references,
+        )
 
         return asdict(
             CallTurnResult(
@@ -46,6 +53,8 @@ class CallOrchestrator:
                 decision=decision,
                 references=references,
                 escalation_required=decision["label"] == "rojo",
+                llm_model=llm_model,
+                used_remote_model=used_remote_model,
             )
         )
 
@@ -54,11 +63,11 @@ class CallOrchestrator:
         user_text: str,
         decision: dict[str, object],
         references: list[dict[str, object]],
-    ) -> str:
+    ) -> tuple[str, str, bool]:
         remote_prompt = self._build_prompt(user_text=user_text, decision=decision, references=references)
         try:
             llm_response = self.llm.generate(remote_prompt)
-            return llm_response.text
+            return llm_response.text, llm_response.model_name, llm_response.used_remote_model
         except Exception:
             pass
 
@@ -86,7 +95,7 @@ class CallOrchestrator:
                 source_phrase,
                 "Si quieres, dime desde cuándo empezó, qué tan fuerte es y si tienes fiebre o cambios en la herida.",
             ]
-        )
+        ), self.llm.model_name, False
 
     def _build_prompt(
         self,

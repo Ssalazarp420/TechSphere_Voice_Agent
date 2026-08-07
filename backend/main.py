@@ -148,6 +148,32 @@ def close_call_session(session_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.get("/metrics")
+def metrics():
+    store = get_vector_store()
+    call_service = get_call_session_service()
+    admin_service = get_admin_service()
+    sessions = call_service.list_sessions()
+    active_sessions = [session for session in sessions if session.get("status") == "active"]
+    assistant_turns = [turn for session in sessions for turn in session.get("turns", []) if turn.get("role") == "assistant"]
+    latencies = [turn.get("latency_ms") for turn in assistant_turns if turn.get("latency_ms") is not None]
+    remote_turns = [turn for turn in assistant_turns if turn.get("used_remote_model")]
+
+    return {
+        "vector_index": store.status(DATASET_DIR),
+        "admin_documents": len(admin_service.list_documents()),
+        "call_sessions": {
+            "total": len(sessions),
+            "active": len(active_sessions),
+            "closed": len(sessions) - len(active_sessions),
+            "assistant_turns": len(assistant_turns),
+            "remote_model_turns": len(remote_turns),
+            "avg_turn_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else None,
+            "max_turn_latency_ms": round(max(latencies), 2) if latencies else None,
+        },
+    }
+
+
 @app.get("/admin/documents")
 def list_admin_documents():
     service = get_admin_service()

@@ -94,6 +94,22 @@ Ya puedes contrastar en tiempo de ejecución:
 - Documentos administrativos activos
 - Turnos por llamada y referencias recuperadas
 - Decisión clínica preliminar por turno
+- Latencia media y p95 de los turnos de llamada
+- Modelo usado por turno y cantidad de turnos atendidos por Gemini
+
+Endpoint agregado para revisión rápida: `GET /metrics`
+
+Para dejar un snapshot persistido antes del demo:
+
+```bash
+python backend/scripts/collect_metrics.py
+```
+
+Para verificar el flujo completo de forma local antes del demo:
+
+```bash
+python backend/scripts/smoke_test.py
+```
 
 ## Nota sobre el modelo
 

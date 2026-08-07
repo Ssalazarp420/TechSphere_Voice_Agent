@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import statistics
+from time import perf_counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +18,9 @@ class SessionTurn:
     timestamp: str
     decision: dict[str, object] | None = None
     references: list[dict[str, object]] = field(default_factory=list)
+    latency_ms: float | None = None
+    llm_model: str | None = None
+    used_remote_model: bool | None = None
 
 
 @dataclass
@@ -76,12 +81,24 @@ class CallSessionService:
         assistant_turns = [turn for turn in session.turns if turn.role == "assistant"]
         total_references = sum(len(turn.references) for turn in assistant_turns)
         escalation = any((turn.decision or {}).get("label") == "rojo" for turn in assistant_turns)
+        latencies = [turn.latency_ms for turn in assistant_turns if turn.latency_ms is not None]
+        remote_turns = [turn for turn in assistant_turns if turn.used_remote_model]
+
+        if latencies:
+            avg_latency = round(sum(latencies) / len(latencies), 2)
+            p95_latency = round(statistics.quantiles(latencies, n=20, method="inclusive")[-1], 2) if len(latencies) > 1 else round(latencies[0], 2)
+        else:
+            avg_latency = None
+            p95_latency = None
 
         return {
             "user_turns": len(user_turns),
             "assistant_turns": len(assistant_turns),
             "total_references": total_references,
             "escalation_required": escalation,
+            "avg_turn_latency_ms": avg_latency,
+            "p95_turn_latency_ms": p95_latency,
+            "remote_model_turns": len(remote_turns),
         }
 
     def create_session(self) -> dict[str, object]:
@@ -123,6 +140,9 @@ class CallSessionService:
         text: str,
         decision: dict[str, object] | None = None,
         references: list[dict[str, object]] | None = None,
+        latency_ms: float | None = None,
+        llm_model: str | None = None,
+        used_remote_model: bool | None = None,
     ) -> dict[str, object]:
         payload = self._load_sessions()
         sessions = payload.get("sessions", [])
@@ -138,6 +158,9 @@ class CallSessionService:
                     "timestamp": self._now(),
                     "decision": decision,
                     "references": references or [],
+                    "latency_ms": latency_ms,
+                    "llm_model": llm_model,
+                    "used_remote_model": used_remote_model,
                 }
             )
             session["turns"] = turns
@@ -158,18 +181,24 @@ class CallSessionService:
 
     def turn(self, session_id: str, utterance: str) -> dict[str, object]:
         self.append_turn(session_id, "user", utterance)
+        started_at = perf_counter()
         result = self.orchestrator.respond(utterance)
+        latency_ms = round((perf_counter() - started_at) * 1000, 2)
         session = self.append_turn(
             session_id,
             "assistant",
             result["assistant_text"],
             result["decision"],
             result["references"],
+            latency_ms=latency_ms,
+            llm_model=result.get("llm_model"),
+            used_remote_model=result.get("used_remote_model"),
         )
 
         return {
             "session_id": session_id,
             "user_text": utterance,
+            "turn_latency_ms": latency_ms,
             **result,
             "session_summary": session["summary"],
             "session_metrics": session["metrics"],

@@ -147,6 +147,17 @@
 
       .metric strong { display: block; font-size: 1.4rem; margin-bottom: 4px; }
 
+      .observability {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .observability .metric {
+        background: rgba(255,255,255,0.03);
+      }
+
       @media (max-width: 900px) {
         .hero, .span-7, .span-5 { grid-template-columns: 1fr; grid-column: span 12; }
       }
@@ -212,6 +223,7 @@
             </div>
             <button class="danger" id="closeCallBtn">Cerrar llamada</button>
           </div>
+          <div id="observabilityGrid" class="observability"></div>
           <div id="summaryGrid" class="summary-grid" style="margin-top: 16px;"></div>
           <div id="summaryList" class="status" style="margin-top: 16px;">Inicia una llamada para ver el resumen aquí.</div>
         </section>
@@ -233,6 +245,7 @@
       const sessionBox = document.getElementById('sessionBox');
       const summaryGrid = document.getElementById('summaryGrid');
       const summaryList = document.getElementById('summaryList');
+      const observabilityGrid = document.getElementById('observabilityGrid');
 
       let voiceEnabled = true;
       let speechRecognition = null;
@@ -292,6 +305,11 @@
 
         const summary = session.summary || {};
         const metrics = session.metrics || {};
+        observabilityGrid.innerHTML = `
+          <div class="metric"><strong>${metrics.avg_turn_latency_ms ?? '—'}</strong>Latencia media ms</div>
+          <div class="metric"><strong>${metrics.p95_turn_latency_ms ?? '—'}</strong>P95 ms</div>
+          <div class="metric"><strong>${metrics.remote_model_turns ?? 0}</strong>Turnos con Gemini</div>
+        `;
         summaryGrid.innerHTML = `
           <div class="metric"><strong>${summary.turn_count || 0}</strong> turnos totales</div>
           <div class="metric"><strong>${metrics.total_references || 0}</strong> referencias usadas</div>
@@ -351,8 +369,10 @@
         renderDecision(payload.decision);
         renderReferences(payload.references);
         renderSession(payload.session || { session_id: sessionId, ...payload.session_summary, metrics: payload.session_metrics });
+        if (payload.llm_model) {
+          callStatus.textContent = `${payload.escalation_required ? 'Escalamiento requerido.' : 'Turno atendido.'} Modelo: ${payload.llm_model} · ${payload.turn_latency_ms ?? '—'} ms`;
+        }
         speak(payload.assistant_text);
-        callStatus.textContent = payload.escalation_required ? 'Escalamiento requerido.' : 'Turno atendido.';
       }
 
       async function refreshSession() {
