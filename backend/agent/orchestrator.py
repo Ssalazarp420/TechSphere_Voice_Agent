@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from backend.decision.rules import classify_report
+from backend.llm.service import GeminiResponder
 from backend.rag.store import CorpusVectorStore
 
 
@@ -20,6 +21,7 @@ class CallOrchestrator:
     def __init__(self, root_dir: Path) -> None:
         self.root_dir = root_dir
         self.store = CorpusVectorStore(root_dir=root_dir)
+        self.llm = GeminiResponder()
 
     def start_call(self) -> dict[str, object]:
         return {
@@ -53,6 +55,13 @@ class CallOrchestrator:
         decision: dict[str, object],
         references: list[dict[str, object]],
     ) -> str:
+        remote_prompt = self._build_prompt(user_text=user_text, decision=decision, references=references)
+        try:
+            llm_response = self.llm.generate(remote_prompt)
+            return llm_response.text
+        except Exception:
+            pass
+
         label = str(decision["label"])
         if label == "rojo":
             opening = "Veo signos de alarma y voy a escalar esto de inmediato."
@@ -77,4 +86,36 @@ class CallOrchestrator:
                 source_phrase,
                 "Si quieres, dime desde cuándo empezó, qué tan fuerte es y si tienes fiebre o cambios en la herida.",
             ]
+        )
+
+    def _build_prompt(
+        self,
+        user_text: str,
+        decision: dict[str, object],
+        references: list[dict[str, object]],
+    ) -> str:
+        top_references = []
+        for reference in references[:3]:
+            metadata = reference.get("metadata", {}) if isinstance(reference, dict) else {}
+            top_references.append(
+                {
+                    "filename": metadata.get("filename", "fuente"),
+                    "category": metadata.get("category", "general"),
+                    "excerpt": str(reference.get("text", ""))[:900],
+                }
+            )
+
+        references_text = "\n".join(
+            f"- {item['filename']} [{item['category']}]: {item['excerpt']}" for item in top_references
+        ) or "- Sin referencias recuperadas"
+
+        return (
+            "Eres un agente clínico de seguimiento postoperatorio para pacientes colombianos. "
+            "Responde en español, con tono breve, empático y claro. No inventes medicamentos, dosis ni diagnósticos. "
+            "Usa solo el contexto recuperado y la decisión local. Si hay bandera roja, indica escalamiento inmediato. "
+            "Si la evidencia no es suficiente, dilo y pide datos concretos. "
+            "Mantén la respuesta en 2 o 3 frases, y termina con una pregunta corta para seguir la evaluación.\n\n"
+            f"DECISIÓN LOCAL:\n{decision}\n\n"
+            f"TURNO DEL PACIENTE:\n{user_text}\n\n"
+            f"REFERENCIAS RECUPERADAS:\n{references_text}\n"
         )

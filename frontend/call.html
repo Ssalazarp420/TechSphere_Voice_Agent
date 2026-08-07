@@ -132,6 +132,21 @@
       .yellow { background: rgba(255, 209, 102, 0.16); color: #ffe59e; }
       .green { background: rgba(78, 214, 167, 0.16); color: #bcffe4; }
 
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .metric {
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.04);
+      }
+
+      .metric strong { display: block; font-size: 1.4rem; margin-bottom: 4px; }
+
       @media (max-width: 900px) {
         .hero, .span-7, .span-5 { grid-template-columns: 1fr; grid-column: span 12; }
       }
@@ -182,6 +197,23 @@
           <div class="status" id="referencesBox" style="margin-top: 12px;">
             Aún no hay referencias recuperadas.
           </div>
+          <div class="status" id="sessionBox" style="margin-top: 12px;">
+            Sesión: no iniciada.
+          </div>
+        </section>
+      </div>
+
+      <div class="grid" style="margin-top: 20px;">
+        <section class="card span-12">
+          <div class="toolbar" style="justify-content: space-between; align-items: start;">
+            <div>
+              <h2 style="margin-bottom: 6px;">Resumen de sesión</h2>
+              <p class="small">Persistido en backend para auditar la llamada y mostrar métricas observables.</p>
+            </div>
+            <button class="danger" id="closeCallBtn">Cerrar llamada</button>
+          </div>
+          <div id="summaryGrid" class="summary-grid" style="margin-top: 16px;"></div>
+          <div id="summaryList" class="status" style="margin-top: 16px;">Inicia una llamada para ver el resumen aquí.</div>
         </section>
       </div>
     </div>
@@ -194,13 +226,18 @@
       const startCallBtn = document.getElementById('startCallBtn');
       const voiceToggleBtn = document.getElementById('voiceToggleBtn');
       const stopVoiceBtn = document.getElementById('stopVoiceBtn');
+      const closeCallBtn = document.getElementById('closeCallBtn');
       const callStatus = document.getElementById('callStatus');
       const decisionBox = document.getElementById('decisionBox');
       const referencesBox = document.getElementById('referencesBox');
+      const sessionBox = document.getElementById('sessionBox');
+      const summaryGrid = document.getElementById('summaryGrid');
+      const summaryList = document.getElementById('summaryList');
 
       let voiceEnabled = true;
       let speechRecognition = null;
       const synth = window.speechSynthesis;
+      let sessionId = localStorage.getItem('techsphereCallSessionId') || '';
 
       const addBubble = (role, text, extra = '') => {
         const bubble = document.createElement('div');
@@ -245,34 +282,93 @@
         referencesBox.innerHTML = `<strong>Referencias:</strong><br>${lines.join('<br>')}`;
       };
 
+      const renderSession = (session) => {
+        if (!session) return;
+        sessionBox.innerHTML = `
+          <strong>Sesión:</strong> ${session.session_id}<br />
+          <strong>Estado:</strong> ${session.status}<br />
+          <strong>Actualizada:</strong> ${new Date(session.updated_at).toLocaleString('es-CO')}
+        `;
+
+        const summary = session.summary || {};
+        const metrics = session.metrics || {};
+        summaryGrid.innerHTML = `
+          <div class="metric"><strong>${summary.turn_count || 0}</strong> turnos totales</div>
+          <div class="metric"><strong>${metrics.total_references || 0}</strong> referencias usadas</div>
+          <div class="metric"><strong>${metrics.user_turns || 0}</strong> turnos del paciente</div>
+          <div class="metric"><strong>${metrics.escalation_required ? 'Sí' : 'No'}</strong> escalamiento requerido</div>
+        `;
+
+        const symptoms = (summary.symptom_turns || []).map((item) => `<li>${item}</li>`).join('');
+        const refs = (summary.reference_documents || []).map((item) => `<li>${item}</li>`).join('');
+        summaryList.innerHTML = `
+          <strong>Decisión final:</strong> ${summary.final_decision?.label || 'sin decisión'}<br /><br />
+          <strong>Síntomas registrados:</strong>
+          <ul>${symptoms || '<li>Sin síntomas aún</li>'}</ul>
+          <strong>Documentos citados:</strong>
+          <ul>${refs || '<li>Sin referencias aún</li>'}</ul>
+        `;
+      };
+
       async function startCall() {
         const response = await fetch('/call/start');
         const data = await response.json();
+        sessionId = data.session_id;
+        localStorage.setItem('techsphereCallSessionId', sessionId);
+        renderSession({
+          session_id: sessionId,
+          status: 'active',
+          updated_at: new Date().toISOString(),
+          summary: { turn_count: 1, symptom_turns: [], reference_documents: [], final_decision: {} },
+          metrics: { user_turns: 0, total_references: 0, escalation_required: false },
+        });
         addBubble('assistant', data.assistant_text, 'Inicio de llamada');
         speak(data.assistant_text);
-        callStatus.textContent = 'Llamada iniciada.';
+        callStatus.textContent = `Llamada iniciada. Sesión ${sessionId}`;
       }
 
       async function sendTurn(text) {
         const cleanText = text.trim();
         if (!cleanText) return;
 
+        if (!sessionId) {
+          callStatus.textContent = 'Primero inicia la llamada.';
+          return;
+        }
+
         addBubble('user', cleanText);
         utteranceInput.value = '';
         callStatus.textContent = 'Procesando turno...';
 
-        const response = await fetch('/call/turn', {
+        const response = await fetch('/call/session/turn', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ utterance: cleanText }),
+          body: JSON.stringify({ session_id: sessionId, utterance: cleanText }),
         });
 
         const payload = await response.json();
         addBubble('assistant', payload.assistant_text, payload.decision ? `Decisión: ${payload.decision.label}` : '');
         renderDecision(payload.decision);
         renderReferences(payload.references);
+        renderSession(payload.session || { session_id: sessionId, ...payload.session_summary, metrics: payload.session_metrics });
         speak(payload.assistant_text);
         callStatus.textContent = payload.escalation_required ? 'Escalamiento requerido.' : 'Turno atendido.';
+      }
+
+      async function refreshSession() {
+        if (!sessionId) return;
+        const response = await fetch(`/call/session/${sessionId}`);
+        if (!response.ok) return;
+        const session = await response.json();
+        renderSession(session);
+      }
+
+      async function closeCall() {
+        if (!sessionId) return;
+        const response = await fetch(`/call/session/${sessionId}/close`, { method: 'POST' });
+        const session = await response.json();
+        renderSession(session);
+        callStatus.textContent = 'Llamada cerrada.';
       }
 
       function startMic() {
@@ -317,6 +413,7 @@
       sendBtn.addEventListener('click', () => sendTurn(utteranceInput.value));
       micBtn.addEventListener('click', startMic);
       startCallBtn.addEventListener('click', startCall);
+      closeCallBtn.addEventListener('click', closeCall);
       voiceToggleBtn.addEventListener('click', () => {
         voiceEnabled = !voiceEnabled;
         voiceToggleBtn.textContent = voiceEnabled ? 'Activar voz' : 'Voz activa';
@@ -336,6 +433,10 @@
       });
 
       addBubble('system', 'Pulsa iniciar llamada para recibir el saludo del agente.');
+
+      if (sessionId) {
+        refreshSession();
+      }
     </script>
   </body>
 </html>

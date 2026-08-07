@@ -62,6 +62,43 @@ git push -u origin main
 - Añadir voz en tiempo real (STT/TTS)
 - Implementar lógica de decisión y escalamiento clínico
 
+## Entregables
+
+- Diagrama de arquitectura: [docs/arquitectura.md](docs/arquitectura.md)
+- Informe final: [docs/informe-final.md](docs/informe-final.md)
+
+## Estado actual
+
+El repositorio ya incluye una primera versión funcional de las dos superficies que pide la rúbrica:
+
+- Consola de administración para subir, listar y eliminar documentos vivos del conocimiento
+- Interfaz de llamada con inicio de llamada, turnos, decisión preliminar y resumen persistido
+
+Además, el corpus clínico ya está inventariado e indexado localmente, con trazabilidad por documento y soporte explícito para PDFs escaneados que aún no pueden procesarse sin OCR.
+
+## Arquitectura actual
+
+- `backend/rag/`: inventario del corpus, extracción de texto, chunking e índice vectorial local
+- `backend/admin/`: alta, baja y listado de documentos subidos desde la consola
+- `backend/decision/`: reglas de triaje inicial para clasificar verde, amarillo o rojo
+- `backend/agent/`: orquestación de la respuesta de llamada con referencias recuperadas
+- `backend/call/`: persistencia de sesiones, turnos, métricas y resumen final
+- `frontend/`: consola de administración e interfaz de llamada en navegador
+
+## Métricas observables disponibles
+
+Ya puedes contrastar en tiempo de ejecución:
+
+- Documentos del corpus total, con texto y escaneados
+- Cantidad de fragmentos indexados
+- Documentos administrativos activos
+- Turnos por llamada y referencias recuperadas
+- Decisión clínica preliminar por turno
+
+## Nota sobre el modelo
+
+La capa de llamada ya está preparada para usar uno de los modelos permitidos por `docs/stack-tecnico.md`. Por defecto queda lista para Gemini 1.5 Flash y, si no hay clave, cae a un fallback local para que el repo siga siendo ejecutable.
+
 ---
 
 ## El problema

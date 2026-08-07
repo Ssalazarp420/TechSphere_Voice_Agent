@@ -21,6 +21,7 @@ if str(ROOT_DIR) not in sys.path:
 from backend.decision.rules import classify_report
 from backend.agent.orchestrator import CallOrchestrator
 from backend.admin.service import AdminDocumentService
+from backend.call.service import CallSessionService
 from backend.rag.store import CorpusVectorStore
 
 
@@ -34,6 +35,10 @@ def get_admin_service() -> AdminDocumentService:
 
 def get_call_orchestrator() -> CallOrchestrator:
     return CallOrchestrator(root_dir=ROOT_DIR)
+
+
+def get_call_session_service() -> CallSessionService:
+    return CallSessionService(root_dir=ROOT_DIR)
 
 
 class SearchRequest(BaseModel):
@@ -50,9 +55,15 @@ class CallTurnRequest(BaseModel):
 
 
 class CallStartResponse(BaseModel):
+    session_id: str
     assistant_text: str
     expected_next: str
     escalation_required: bool
+
+
+class CallTurnWithSessionRequest(BaseModel):
+    session_id: str = Field(min_length=1)
+    utterance: str = Field(min_length=1, description="Turno del paciente transcrito o escrito")
 
 
 def _files_response(payload: list[dict[str, object]]) -> dict[str, object]:
@@ -100,14 +111,41 @@ def decision_preview(payload: DecisionRequest):
 
 @app.get("/call/start", response_model=CallStartResponse)
 def call_start():
-    orchestrator = get_call_orchestrator()
-    return orchestrator.start_call()
+    service = get_call_session_service()
+    return service.start_call()
 
 
 @app.post("/call/turn")
 def call_turn(payload: CallTurnRequest):
     orchestrator = get_call_orchestrator()
     return orchestrator.respond(payload.utterance)
+
+
+@app.post("/call/session/turn")
+def call_turn_with_session(payload: CallTurnWithSessionRequest):
+    service = get_call_session_service()
+    try:
+        return service.turn(payload.session_id, payload.utterance)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/call/session/{session_id}")
+def get_call_session(session_id: str):
+    service = get_call_session_service()
+    try:
+        return service.get_session(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/call/session/{session_id}/close")
+def close_call_session(session_id: str):
+    service = get_call_session_service()
+    try:
+        return service.close_session(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/admin/documents")
