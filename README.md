@@ -30,18 +30,26 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
    pip install -r backend/requirements.txt
    ```
 
-3. Ejecutar la API
+3. Generar el catálogo e indexar el corpus
+  ```bash
+  python backend/scripts/build_knowledge_base.py
+  python backend/scripts/index_corpus.py
+  ```
+
+4. Ejecutar la API
    ```bash
    uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-4. Abrir en el navegador
+5. Abrir en el navegador
    - http://localhost:8000/admin
    - http://localhost:8000/call
 
 ## Variables de entorno
 
 Copia .env.example a .env y ajusta los valores si vas a conectar modelos o servicios externos.
+
+Si tu entorno no puede descargar el modelo semántico la primera vez, deja `EMBEDDING_BACKEND=auto` para que use BGE-M3 cuando esté disponible y caiga al hash como respaldo. Si quieres forzar el índice semántico, usa `EMBEDDING_BACKEND=sentence-transformers`.
 
 ## GitHub
 
@@ -75,6 +83,8 @@ El repositorio ya incluye una primera versión funcional de las dos superficies 
 - Interfaz de llamada con inicio de llamada, turnos, decisión preliminar y resumen persistido
 
 Además, el corpus clínico ya está inventariado e indexado localmente, con trazabilidad por documento y soporte explícito para PDFs escaneados que aún no pueden procesarse sin OCR.
+
+La capa de RAG usa ChromaDB con BGE-M3 como embedding local por defecto y conserva un fallback hash para entornos sin descarga de modelos.
 
 ## Arquitectura actual
 

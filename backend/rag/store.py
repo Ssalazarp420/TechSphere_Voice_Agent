@@ -8,7 +8,7 @@ import re
 import chromadb
 
 from .chunking import chunk_text
-from .embeddings import HashEmbeddingFunction
+from .embeddings import create_embedding_function
 from .pdf_utils import extract_pdf_text, inspect_pdf
 
 
@@ -18,12 +18,15 @@ class CorpusVectorStore:
         self.persist_dir = root_dir / "backend" / "data" / "chroma"
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         self.client = chromadb.PersistentClient(path=str(self.persist_dir))
-        self.embedding_function = HashEmbeddingFunction()
+        self.embedding_function = create_embedding_function()
         self.collection = self.client.get_or_create_collection(
             name=collection_name,
             embedding_function=self.embedding_function,
             metadata={"hnsw:space": "cosine"},
         )
+        self.embedding_backend = getattr(self.embedding_function, "backend_name", type(self.embedding_function).__name__)
+        self.embedding_model = getattr(self.embedding_function, "model_name", None)
+        self.embedding_dimensions = getattr(self.embedding_function, "embedding_dimensions", None)
 
     def reset(self) -> None:
         self.client.delete_collection(self.collection.name)
@@ -58,6 +61,9 @@ class CorpusVectorStore:
             "text_documents": text_documents,
             "scanned_documents": scanned_documents,
             "indexed_chunks": self.count(),
+            "embedding_backend": self.embedding_backend,
+            "embedding_model": self.embedding_model,
+            "embedding_dimensions": self.embedding_dimensions,
         }
 
     def ingest_corpus(self, corpus_root: Path) -> dict[str, int]:

@@ -15,6 +15,11 @@ __pycache__/
 *.log
 
 # Artefactos generados por el proyecto
+backend/data/chroma/
+backend/data/admin_uploads/
+backend/data/admin_registry.json
+backend/data/corpus_catalog.json
+backend/data/vector_index_summary.json
 backend/data/call_sessions.json
 backend/data/metrics_snapshot.json
 backend/data/smoke_test_report.json
