@@ -169,7 +169,7 @@
         <section class="card">
           <p class="small">TechSphere Voice Agent · interfaz de llamada</p>
           <h1>Habla con el agente y escucha la respuesta.</h1>
-          <p class="lede">Esta versión ya conversa con el backend, recupera conocimiento del corpus y toma una decisión preliminar de escalamiento. Si el navegador lo permite, también puede usar reconocimiento y síntesis de voz.</p>
+          <p class="lede">Esta versión ya conversa con el backend, recupera conocimiento del corpus y toma una decisión preliminar de escalamiento. El reconocimiento de voz corre en el backend con Groq Whisper; la respuesta hablada usa síntesis del navegador.</p>
           <div class="chip-row">
             <span class="chip">Micrófono opcional</span>
             <span class="chip">Respuesta hablada</span>
@@ -186,7 +186,7 @@
             <button class="secondary" id="voiceToggleBtn">Activar voz</button>
             <button class="ghost" id="stopVoiceBtn">Detener voz</button>
           </div>
-          <p class="small" style="margin-top: 12px;">La voz usa las capacidades del navegador; si no están disponibles, puedes escribir el turno manualmente.</p>
+          <p class="small" style="margin-top: 12px;">El micrófono se transcribe en el backend con Groq Whisper. Si no tienes micrófono o falla, puedes escribir el turno manualmente.</p>
         </aside>
       </div>
 
@@ -248,7 +248,9 @@
       const observabilityGrid = document.getElementById('observabilityGrid');
 
       let voiceEnabled = true;
-      let speechRecognition = null;
+      let mediaRecorder = null;
+      let audioChunks = [];
+      let isRecording = false;
       const synth = window.speechSynthesis;
       let sessionId = localStorage.getItem('techsphereCallSessionId') || '';
 
@@ -391,47 +393,99 @@
         callStatus.textContent = 'Llamada cerrada.';
       }
 
-      function startMic() {
-        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!Recognition) {
-          callStatus.textContent = 'Tu navegador no soporta reconocimiento de voz. Usa el texto manual.';
+      async function toggleMic() {
+        if (isRecording) {
+          stopRecording();
+          return;
+        }
+        await startRecording();
+      }
+
+      async function startRecording() {
+        if (!sessionId) {
+          callStatus.textContent = 'Primero inicia la llamada.';
           return;
         }
 
-        if (speechRecognition) {
-          speechRecognition.stop();
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          callStatus.textContent = 'Tu navegador no soporta grabación de audio. Usa el texto manual.';
+          return;
         }
 
-        speechRecognition = new Recognition();
-        speechRecognition.lang = 'es-CO';
-        speechRecognition.interimResults = false;
-        speechRecognition.maxAlternatives = 1;
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+          mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+          audioChunks = [];
 
-        speechRecognition.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
-          utteranceInput.value = transcript;
-          sendTurn(transcript);
-        };
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) audioChunks.push(event.data);
+          };
 
-        speechRecognition.onerror = () => {
-          callStatus.textContent = 'No se pudo iniciar el micrófono.';
-        };
+          mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach((track) => track.stop());
+            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+            await sendAudioTurn(audioBlob);
+          };
 
-        speechRecognition.onstart = () => {
-          callStatus.textContent = 'Escuchando...';
-        };
+          mediaRecorder.start();
+          isRecording = true;
+          micBtn.textContent = 'Detener grabación';
+          callStatus.textContent = 'Grabando... pulsa "Detener grabación" cuando termines.';
+        } catch (error) {
+          callStatus.textContent = `No se pudo acceder al micrófono: ${error.message}`;
+        }
+      }
 
-        speechRecognition.onend = () => {
-          if (callStatus.textContent === 'Escuchando...') {
-            callStatus.textContent = 'Micrófono detenido.';
+      function stopRecording() {
+        if (mediaRecorder && isRecording) {
+          mediaRecorder.stop();
+        }
+        isRecording = false;
+        micBtn.textContent = 'Usar micrófono';
+      }
+
+      async function sendAudioTurn(audioBlob) {
+        if (!sessionId) {
+          callStatus.textContent = 'Primero inicia la llamada.';
+          return;
+        }
+
+        callStatus.textContent = 'Transcribiendo con Groq Whisper y procesando turno...';
+
+        const formData = new FormData();
+        formData.append('session_id', sessionId);
+        formData.append('audio', audioBlob, 'audio.webm');
+
+        try {
+          const response = await fetch('/call/session/turn/audio', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            callStatus.textContent = errorPayload.detail || `Error al procesar el audio (${response.status}).`;
+            return;
           }
-        };
 
-        speechRecognition.start();
+          const payload = await response.json();
+          addBubble('user', payload.user_text, 'Transcrito con Whisper');
+          addBubble('assistant', payload.assistant_text, payload.decision ? `Decisión: ${payload.decision.label}` : '');
+          renderDecision(payload.decision);
+          renderReferences(payload.references);
+          renderSession(payload.session || { session_id: sessionId, ...payload.session_summary, metrics: payload.session_metrics });
+          if (payload.llm_model) {
+            callStatus.textContent = `${payload.escalation_required ? 'Escalamiento requerido.' : 'Turno atendido.'} STT: ${payload.stt_model ?? '—'} · Modelo: ${payload.llm_model} · ${payload.turn_latency_ms ?? '—'} ms`;
+          }
+          speak(payload.assistant_text);
+        } catch (error) {
+          callStatus.textContent = `Error de red al enviar el audio: ${error.message}`;
+        }
       }
 
       sendBtn.addEventListener('click', () => sendTurn(utteranceInput.value));
-      micBtn.addEventListener('click', startMic);
+      micBtn.addEventListener('click', toggleMic);
       startCallBtn.addEventListener('click', startCall);
       closeCallBtn.addEventListener('click', closeCall);
       voiceToggleBtn.addEventListener('click', () => {
