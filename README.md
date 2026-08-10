@@ -49,7 +49,7 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
 
 Copia .env.example a .env y ajusta los valores si vas a conectar modelos o servicios externos.
 
-Si tu entorno no puede descargar el modelo semántico la primera vez, deja `EMBEDDING_BACKEND=auto` para que use el modelo local cuando esté disponible y caiga al hash como respaldo. Si quieres forzar el índice semántico, usa `EMBEDDING_BACKEND=sentence-transformers`.
+Por defecto `EMBEDDING_BACKEND=sentence-transformers`: si el modelo no puede cargar, la app falla explícitamente en vez de degradar en silencio al hash. Esto es intencional — como el índice ya viene pre-construido con este modelo, un fallback silencioso a otro backend siempre termina en un error de dimensión más adelante, solo que más difícil de diagnosticar. Si necesitas correr sin poder descargar el modelo (por ejemplo, para probar la lógica de decisión sin RAG real), usa `EMBEDDING_BACKEND=hash` explícitamente y ten en cuenta que vas a necesitar reindexar el corpus completo para que vuelva a ser consistente.
 
 Por defecto se usa `paraphrase-multilingual-MiniLM-L12-v2` (~470MB) en vez de BGE-M3 (~2.2GB) porque BGE-M3 puede agotar la RAM o tardar horas en equipos modestos durante la indexación. El índice ya viene pre-construido con MiniLM en `backend/data/chroma/` — no hace falta reindexar salvo que agregues documentos nuevos. Si tu máquina tiene RAM de sobra puedes forzar BGE-M3 con `EMBEDDING_MODEL=BAAI/bge-m3` en tu `.env`, pero tendrías que reindexar el corpus completo (las dimensiones de los vectores cambian).
 

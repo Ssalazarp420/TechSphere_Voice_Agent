@@ -118,7 +118,14 @@ class SentenceTransformerEmbeddingFunction(EmbeddingFunction[Documents]):
 
 
 def create_embedding_function() -> EmbeddingFunction[Documents]:
-    backend = os.getenv("EMBEDDING_BACKEND", "auto").strip().lower()
+    # Antes el default era "auto", que caía en silencio al hash (256 dim) si
+    # sentence-transformers fallaba por cualquier motivo transitorio (carrera con
+    # --reload, lock de archivo en Windows, etc). Como el índice ya quedó construido
+    # con sentence-transformers (384 dim), un fallback silencioso siempre termina en
+    # InvalidDimensionException más adelante, solo que de forma más difícil de
+    # diagnosticar. Ahora el default exige sentence-transformers explícitamente: si
+    # falla, falla ruidoso con el traceback real en vez de degradar en silencio.
+    backend = os.getenv("EMBEDDING_BACKEND", "sentence-transformers").strip().lower()
 
     if backend == "hash":
         return HashEmbeddingFunction(dimensions=_read_env_int("HASH_EMBEDDING_DIMENSIONS", 256))

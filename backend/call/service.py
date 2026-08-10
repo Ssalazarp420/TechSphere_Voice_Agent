@@ -200,6 +200,7 @@ class CallSessionService:
             "user_text": utterance,
             "turn_latency_ms": latency_ms,
             **result,
+            "session": session,
             "session_summary": session["summary"],
             "session_metrics": session["metrics"],
         }
