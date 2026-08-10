@@ -254,6 +254,19 @@
       const synth = window.speechSynthesis;
       let sessionId = localStorage.getItem('techsphereCallSessionId') || '';
 
+      // Detección de silencio (VAD por energía) para detener la grabación sola
+      // cuando el paciente deja de hablar, en vez de exigir que pulse "Detener
+      // grabación" manualmente.
+      let vadAudioContext = null;
+      let vadAnalyser = null;
+      let vadRafId = null;
+      let vadSilenceStartedAt = null;
+      let recordingStartedAt = 0;
+      const VAD_SILENCE_RMS_THRESHOLD = 0.02;
+      const VAD_SILENCE_DURATION_MS = 1500;
+      const VAD_MIN_RECORDING_MS = 700;
+      const VAD_MAX_RECORDING_MS = 20000;
+
       const addBubble = (role, text, extra = '') => {
         const bubble = document.createElement('div');
         bubble.className = `bubble ${role}`;
@@ -331,20 +344,35 @@
       };
 
       async function startCall() {
-        const response = await fetch('/call/start');
-        const data = await response.json();
-        sessionId = data.session_id;
-        localStorage.setItem('techsphereCallSessionId', sessionId);
-        renderSession({
-          session_id: sessionId,
-          status: 'active',
-          updated_at: new Date().toISOString(),
-          summary: { turn_count: 1, symptom_turns: [], reference_documents: [], final_decision: {} },
-          metrics: { user_turns: 0, total_references: 0, escalation_required: false },
-        });
-        addBubble('assistant', data.assistant_text, 'Inicio de llamada');
-        speak(data.assistant_text);
-        callStatus.textContent = `Llamada iniciada. Sesión ${sessionId}`;
+        startCallBtn.disabled = true;
+        startCallBtn.textContent = 'Iniciando llamada…';
+        callStatus.textContent = 'Conectando con el agente, un momento...';
+
+        try {
+          const response = await fetch('/call/start');
+          if (!response.ok) {
+            callStatus.textContent = `No se pudo iniciar la llamada (${response.status}). Intenta de nuevo.`;
+            return;
+          }
+          const data = await response.json();
+          sessionId = data.session_id;
+          localStorage.setItem('techsphereCallSessionId', sessionId);
+          renderSession({
+            session_id: sessionId,
+            status: 'active',
+            updated_at: new Date().toISOString(),
+            summary: { turn_count: 1, symptom_turns: [], reference_documents: [], final_decision: {} },
+            metrics: { user_turns: 0, total_references: 0, escalation_required: false },
+          });
+          addBubble('assistant', data.assistant_text, 'Inicio de llamada');
+          speak(data.assistant_text);
+          callStatus.textContent = `Llamada iniciada. Sesión ${sessionId}`;
+        } catch (error) {
+          callStatus.textContent = `Error de red al iniciar la llamada: ${error.message}`;
+        } finally {
+          startCallBtn.disabled = false;
+          startCallBtn.textContent = 'Iniciar llamada';
+        }
       }
 
       async function sendTurn(text) {
@@ -358,23 +386,37 @@
 
         addBubble('user', cleanText);
         utteranceInput.value = '';
-        callStatus.textContent = 'Procesando turno...';
+        callStatus.textContent = 'Procesando turno... (el agente está pensando la respuesta)';
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Enviando…';
 
-        const response = await fetch('/call/session/turn', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, utterance: cleanText }),
-        });
+        try {
+          const response = await fetch('/call/session/turn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, utterance: cleanText }),
+          });
 
-        const payload = await response.json();
-        addBubble('assistant', payload.assistant_text, payload.decision ? `Decisión: ${payload.decision.label}` : '');
-        renderDecision(payload.decision);
-        renderReferences(payload.references);
-        renderSession(payload.session || { session_id: sessionId, ...payload.session_summary, metrics: payload.session_metrics });
-        if (payload.llm_model) {
-          callStatus.textContent = `${payload.escalation_required ? 'Escalamiento requerido.' : 'Turno atendido.'} Modelo: ${payload.llm_model} · ${payload.turn_latency_ms ?? '—'} ms`;
+          if (!response.ok) {
+            callStatus.textContent = `Error al procesar el turno (${response.status}).`;
+            return;
+          }
+
+          const payload = await response.json();
+          addBubble('assistant', payload.assistant_text, payload.decision ? `Decisión: ${payload.decision.label}` : '');
+          renderDecision(payload.decision);
+          renderReferences(payload.references);
+          renderSession(payload.session || { session_id: sessionId, ...payload.session_summary, metrics: payload.session_metrics });
+          if (payload.llm_model) {
+            callStatus.textContent = `${payload.escalation_required ? 'Escalamiento requerido.' : 'Turno atendido.'} Modelo: ${payload.llm_model} · ${payload.turn_latency_ms ?? '—'} ms`;
+          }
+          speak(payload.assistant_text);
+        } catch (error) {
+          callStatus.textContent = `Error de red al procesar el turno: ${error.message}`;
+        } finally {
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Enviar turno';
         }
-        speak(payload.assistant_text);
       }
 
       async function refreshSession() {
@@ -430,11 +472,74 @@
 
           mediaRecorder.start();
           isRecording = true;
+          recordingStartedAt = Date.now();
           micBtn.textContent = 'Detener grabación';
-          callStatus.textContent = 'Grabando... pulsa "Detener grabación" cuando termines.';
+          callStatus.textContent = 'Escuchando... se detiene sola cuando dejes de hablar (o pulsa "Detener grabación").';
+          startSilenceDetection(stream);
         } catch (error) {
           callStatus.textContent = `No se pudo acceder al micrófono: ${error.message}`;
         }
+      }
+
+      function startSilenceDetection(stream) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return; // navegador sin Web Audio API: se queda el botón manual
+
+        vadAudioContext = new AudioContextClass();
+        const source = vadAudioContext.createMediaStreamSource(stream);
+        vadAnalyser = vadAudioContext.createAnalyser();
+        vadAnalyser.fftSize = 2048;
+        source.connect(vadAnalyser);
+
+        const dataArray = new Uint8Array(vadAnalyser.fftSize);
+        vadSilenceStartedAt = null;
+
+        const checkVolume = () => {
+          if (!isRecording) return;
+
+          const elapsedRecording = Date.now() - recordingStartedAt;
+          if (elapsedRecording >= VAD_MAX_RECORDING_MS) {
+            callStatus.textContent = 'Grabación muy larga, procesando lo que se alcanzó a decir...';
+            stopRecording();
+            return;
+          }
+
+          vadAnalyser.getByteTimeDomainData(dataArray);
+          let sumSquares = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            const normalized = (dataArray[i] - 128) / 128;
+            sumSquares += normalized * normalized;
+          }
+          const rms = Math.sqrt(sumSquares / dataArray.length);
+
+          if (rms < VAD_SILENCE_RMS_THRESHOLD && elapsedRecording > VAD_MIN_RECORDING_MS) {
+            if (vadSilenceStartedAt === null) vadSilenceStartedAt = Date.now();
+            if (Date.now() - vadSilenceStartedAt >= VAD_SILENCE_DURATION_MS) {
+              callStatus.textContent = 'Silencio detectado, procesando...';
+              stopRecording();
+              return;
+            }
+          } else {
+            vadSilenceStartedAt = null;
+          }
+
+          vadRafId = requestAnimationFrame(checkVolume);
+        };
+
+        vadRafId = requestAnimationFrame(checkVolume);
+      }
+
+      function stopSilenceDetection() {
+        if (vadRafId !== null) {
+          cancelAnimationFrame(vadRafId);
+          vadRafId = null;
+        }
+        if (vadAudioContext) {
+          vadAudioContext.close().catch(() => {});
+          vadAudioContext = null;
+        }
+        vadAnalyser = null;
+        vadSilenceStartedAt = null;
       }
 
       function stopRecording() {
@@ -443,6 +548,7 @@
         }
         isRecording = false;
         micBtn.textContent = 'Usar micrófono';
+        stopSilenceDetection();
       }
 
       async function sendAudioTurn(audioBlob) {

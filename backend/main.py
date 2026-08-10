@@ -1,4 +1,5 @@
 from pathlib import Path
+from time import perf_counter
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -158,19 +159,21 @@ async def call_turn_with_audio(
         )
 
     audio_bytes = await audio.read()
+    stt_started_at = perf_counter()
     try:
         transcription = transcriber.transcribe(audio_bytes, filename=audio.filename or "audio.webm")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=f"Error al transcribir con Groq: {exc}") from exc
+    stt_latency_ms = round((perf_counter() - stt_started_at) * 1000, 2)
 
     if not transcription.text:
         raise HTTPException(status_code=422, detail="No se detectó texto en el audio enviado.")
 
     service = get_call_session_service()
     try:
-        result = service.turn(session_id, transcription.text)
+        result = service.turn(session_id, transcription.text, stt_latency_ms=stt_latency_ms)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -204,24 +207,11 @@ def metrics():
     store = get_vector_store()
     call_service = get_call_session_service()
     admin_service = get_admin_service()
-    sessions = call_service.list_sessions()
-    active_sessions = [session for session in sessions if session.get("status") == "active"]
-    assistant_turns = [turn for session in sessions for turn in session.get("turns", []) if turn.get("role") == "assistant"]
-    latencies = [turn.get("latency_ms") for turn in assistant_turns if turn.get("latency_ms") is not None]
-    remote_turns = [turn for turn in assistant_turns if turn.get("used_remote_model")]
 
     return {
         "vector_index": store.status(DATASET_DIR),
         "admin_documents": len(admin_service.list_documents()),
-        "call_sessions": {
-            "total": len(sessions),
-            "active": len(active_sessions),
-            "closed": len(sessions) - len(active_sessions),
-            "assistant_turns": len(assistant_turns),
-            "remote_model_turns": len(remote_turns),
-            "avg_turn_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else None,
-            "max_turn_latency_ms": round(max(latencies), 2) if latencies else None,
-        },
+        "call_sessions": call_service.global_metrics(),
     }
 
 

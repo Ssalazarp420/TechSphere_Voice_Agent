@@ -17,22 +17,13 @@ def main() -> None:
     store = CorpusVectorStore(root_dir=root_dir)
     admin_service = AdminDocumentService(root_dir=root_dir)
     call_service = CallSessionService(root_dir=root_dir)
-    sessions = call_service.list_sessions()
-    assistant_turns = [turn for session in sessions for turn in session.get("turns", []) if turn.get("role") == "assistant"]
-    latencies = [turn.get("latency_ms") for turn in assistant_turns if turn.get("latency_ms") is not None]
 
+    # Misma función que expone GET /metrics — un snapshot persistido no debe
+    # poder divergir del endpoint en vivo.
     payload = {
         "vector_index": store.status(root_dir / "dataset" / "textos"),
         "admin_documents": len(admin_service.list_documents()),
-        "call_sessions": {
-            "total": len(sessions),
-            "active": len([session for session in sessions if session.get("status") == "active"]),
-            "closed": len([session for session in sessions if session.get("status") == "closed"]),
-            "assistant_turns": len(assistant_turns),
-            "remote_model_turns": len([turn for turn in assistant_turns if turn.get("used_remote_model")]),
-            "avg_turn_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else None,
-            "max_turn_latency_ms": round(max(latencies), 2) if latencies else None,
-        },
+        "call_sessions": call_service.global_metrics(),
     }
 
     output_path = root_dir / "backend" / "data" / "metrics_snapshot.json"

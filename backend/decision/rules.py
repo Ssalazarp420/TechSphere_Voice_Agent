@@ -7,28 +7,51 @@ from dataclasses import dataclass, asdict
 RED_FLAG_KEYWORDS = [
     "dificultad para respirar",
     "falta de aire",
+    "me ahogo",
+    "no puedo respirar",
     "dolor de pecho",
+    "dolor en el pecho",
     "desmayo",
+    "me desmaye",
+    "me desmayé",
     "confusion",
     "confusión",
+    "no reconozco",
     "sangrado abundante",
+    "sangra mucho",
+    "no para de sangrar",
     "herida abierta",
+    "se me abrio la herida",
+    "se me abrió la herida",
     "pus",
     "secrecion con mal olor",
     "secreción con mal olor",
     "mal olor",
     "olor fétido",
+    "olor feo",
     "huele mal",
     "huele raro",
+    "huele feo",
     "vomito persistente",
     "vómito persistente",
+    "no para de vomitar",
+    "veo borroso",
+    "se me durmió medio cuerpo",
+    "se me durmió la mitad",
 ]
 
 YELLOW_FLAG_KEYWORDS = [
     "fiebre",
+    "calentura",
     "enrojecimiento",
+    "enrojecida",
+    "colorada",
     "inflamacion",
     "inflamación",
+    "hinchada",
+    "hinchado",
+    "hinchazon",
+    "hinchazón hinchazón",
     "nausea",
     "náusea",
     "vomito",
@@ -36,8 +59,86 @@ YELLOW_FLAG_KEYWORDS = [
     "dolor moderado",
     "dolor fuerte",
     "dolor severo",
+    "dolor muy fuerte",
+    "duele mucho",
+    "duele bastante",
     "poco apetito",
+    "sin apetito",
+    "no como nada",
     "debilidad",
+    "muy débil",
+    "muy debil",
+    "mareo",
+    "mareada",
+    "mareado",
+    "supura",
+    "chorrea",
+    "gotea",
+    "arde mucho",
+    "me arde bastante",
+    "abultado",
+    "abultada",
+    "caliente al tacto",
+    "caliente la herida",
+]
+
+# Frases que indican que el paciente reporta sentirse bien o sin síntomas.
+# Necesarias para no penalizar como "ambiguo" un reporte tranquilizador
+# genuino (evitaría convertir cada respuesta calmada en un falso amarillo).
+REASSURANCE_PATTERNS = [
+    "me siento bien",
+    "estoy bien",
+    "todo bien",
+    "todo normal",
+    "sin dolor",
+    "no tengo dolor",
+    "no me duele",
+    "sin fiebre",
+    "no tengo fiebre",
+    "nada raro",
+    "no tengo nada",
+    "ningun sintoma",
+    "ningún síntoma",
+    "muy bien",
+    "excelente",
+    "de maravilla",
+]
+
+# Lenguaje vago/regional que en la práctica describe un síntoma real pero no
+# calza con ninguna keyword clínica de las listas de arriba — el ejemplo del
+# propio README del reto ("me duele como aquí abajito de la axila") es
+# exactamente este caso. Si aparece sin que ninguna lista anterior lo capture
+# y sin que el paciente se muestre tranquilo, el sistema no debe decidir
+# "verde" en silencio: debe tratarlo como señal amarilla y pedir precisión.
+AMBIGUOUS_MARKERS = [
+    "como que",
+    "como si",
+    "medio raro",
+    "algo raro",
+    "se siente raro",
+    "raro aqui",
+    "raro aquí",
+    "no se que es",
+    "no sé qué es",
+    "no se si es normal",
+    "no sé si es normal",
+    "no estoy seguro",
+    "no estoy segura",
+    "tal vez",
+    "quizas",
+    "quizás",
+    "una cosa aqui",
+    "una cosa aquí",
+    "algo aqui abajo",
+    "algo aquí abajo",
+    "abajito",
+    "por aqui",
+    "por aquí",
+    "se me sale",
+    "no se explicarlo",
+    "no sé explicarlo",
+    "algo extraño",
+    "algo raro cuando",
 ]
 
 
@@ -48,6 +149,8 @@ class DecisionResult:
     score: int
     red_flags: list[str]
     yellow_flags: list[str]
+    requires_clarification: bool = False
+    follow_up_question: str | None = None
 
 
 def _extract_numeric_value(text: str, keyword_patterns: list[str]) -> float | None:
@@ -62,16 +165,50 @@ def _extract_numeric_value(text: str, keyword_patterns: list[str]) -> float | No
     return None
 
 
+# "sin fiebre" o "no tengo dolor" no pueden activar la keyword solo porque la
+# palabra aparece en el texto: sin esto, cualquier negación explícita del
+# síntoma se leía como si el síntoma estuviera presente (falso positivo). Se
+# busca una señal de negación en una ventana corta inmediatamente antes de la
+# keyword, en vez de un NLP completo — suficiente para el caso común de un
+# turno de voz corto.
+NEGATION_CUES = [
+    "sin ",
+    "no tengo",
+    "no tiene",
+    "no hay",
+    "no presenta",
+    "no ha tenido",
+    "nada de",
+    "ausencia de",
+    "niega",
+    "no siento",
+    "no me duele",
+]
+
+
+def _is_negated(lowered: str, keyword: str, window: int = 25) -> bool:
+    index = lowered.find(keyword)
+    if index == -1:
+        return False
+    preceding = lowered[max(0, index - window):index]
+    return any(cue in preceding for cue in NEGATION_CUES)
+
+
 def classify_report(text: str) -> dict[str, object]:
     lowered = text.lower()
-    red_flags = [keyword for keyword in RED_FLAG_KEYWORDS if keyword in lowered]
-    yellow_flags = [keyword for keyword in YELLOW_FLAG_KEYWORDS if keyword in lowered]
+    red_flags = [keyword for keyword in RED_FLAG_KEYWORDS if keyword in lowered and not _is_negated(lowered, keyword)]
+    yellow_flags = [
+        keyword for keyword in YELLOW_FLAG_KEYWORDS if keyword in lowered and not _is_negated(lowered, keyword)
+    ]
 
     pain_value = _extract_numeric_value(
         lowered,
         [r"(?:dolor|pain)\s*(?:de\s*)?(?:es de|en|nivel)?\s*(\d+(?:[.,]\d+)?)", r"(\d+(?:[.,]\d+)?)\s*/\s*10"],
     )
     temperature_value = _extract_numeric_value(lowered, [r"(?:fiebre|temperatura|temp)\s*(\d+(?:[.,]\d+)?)"])
+
+    has_reassurance = any(pattern in lowered for pattern in REASSURANCE_PATTERNS)
+    ambiguous_hits = [marker for marker in AMBIGUOUS_MARKERS if marker in lowered]
 
     score = 0
     if red_flags:
@@ -85,15 +222,48 @@ def classify_report(text: str) -> dict[str, object]:
     if temperature_value is not None and 37.5 <= temperature_value < 38.0:
         score += 1
 
+    # Asimetría clínica (rúbrica: el falso negativo es la falla catastrófica).
+    # Si el paciente describe algo con lenguaje vago/regional que ninguna
+    # keyword clínica captura, y no se está mostrando explícitamente tranquilo,
+    # no hay base para decidir "verde" con confianza. Se trata como señal
+    # amarilla — obliga a indagar en vez de tranquilizar por defecto.
+    is_ambiguous_signal = bool(ambiguous_hits) and not red_flags and not yellow_flags and not has_reassurance
+    if is_ambiguous_signal:
+        score += 1
+        yellow_flags = yellow_flags + ["lenguaje ambiguo sin síntoma clínico identificado"]
+
+    # Un reporte sin ninguna palabra reconocible (ni de alarma, ni ambigua, ni
+    # de tranquilidad) tampoco es evidencia de que todo esté bien — es
+    # simplemente falta de información. Se marca para que el agente indague
+    # antes de tranquilizar, sin forzar el score hacia amarillo (podría ser un
+    # "hola" o un turno de apertura, no un síntoma negado).
+    is_uninformative = not (red_flags or yellow_flags or has_reassurance or ambiguous_hits or pain_value is not None or temperature_value is not None)
+
+    requires_clarification = is_ambiguous_signal or is_uninformative
+    follow_up_question = (
+        "¿Puedes contarme con más detalle qué sientes exactamente, en qué parte del cuerpo y desde cuándo?"
+        if requires_clarification
+        else None
+    )
+
     if score >= 3:
         label = "rojo"
         rationale = "Se detectaron signos de alarma que requieren escalamiento inmediato."
     elif score >= 1:
         label = "amarillo"
-        rationale = "Hay síntomas que ameritan seguimiento estrecho y posible escalamiento."
+        rationale = (
+            "El reporte usa lenguaje ambiguo o regional que no se puede clasificar con confianza; "
+            "se requiere indagar más antes de descartar riesgo."
+            if is_ambiguous_signal
+            else "Hay síntomas que ameritan seguimiento estrecho y posible escalamiento."
+        )
     else:
         label = "verde"
-        rationale = "No se detectan signos de alarma en el texto reportado."
+        rationale = (
+            "No hay suficiente información para clasificar el reporte; se requiere indagar antes de tranquilizar."
+            if is_uninformative
+            else "No se detectan signos de alarma en el texto reportado."
+        )
 
     return asdict(
         DecisionResult(
@@ -102,5 +272,7 @@ def classify_report(text: str) -> dict[str, object]:
             score=score,
             red_flags=red_flags,
             yellow_flags=yellow_flags,
+            requires_clarification=requires_clarification,
+            follow_up_question=follow_up_question,
         )
     )
