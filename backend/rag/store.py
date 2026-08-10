@@ -39,6 +39,18 @@ class CorpusVectorStore:
     def count(self) -> int:
         return self.collection.count()
 
+    def actual_index_dimension(self) -> int | None:
+        """Dimensión real de los vectores ya guardados en el índice, leída directamente
+        de un registro existente (no de lo que el código *dice* que debería usar).
+        Devuelve None si el índice está vacío."""
+        if self.count() == 0:
+            return None
+        sample = self.collection.get(limit=1, include=["embeddings"])
+        embeddings = sample.get("embeddings")
+        if embeddings is None or len(embeddings) == 0:
+            return None
+        return len(embeddings[0])
+
     def status(self, corpus_root: Path) -> dict[str, Any]:
         catalog_path = self.root_dir / "backend" / "data" / "corpus_catalog.json"
         corpus_documents = 0
@@ -53,6 +65,13 @@ class CorpusVectorStore:
             text_documents = int(catalog.get("text_documents", 0))
             scanned_documents = int(catalog.get("scanned_documents", 0))
 
+        actual_dimension = self.actual_index_dimension()
+        dimension_mismatch = (
+            actual_dimension is not None
+            and self.embedding_dimensions is not None
+            and actual_dimension != self.embedding_dimensions
+        )
+
         return {
             "corpus_root": str(corpus_root),
             "catalog_path": str(catalog_path),
@@ -64,6 +83,8 @@ class CorpusVectorStore:
             "embedding_backend": self.embedding_backend,
             "embedding_model": self.embedding_model,
             "embedding_dimensions": self.embedding_dimensions,
+            "actual_index_dimensions": actual_dimension,
+            "dimension_mismatch": dimension_mismatch,
         }
 
     def ingest_corpus(self, corpus_root: Path, batch_size: int = 64, progress: bool = True) -> dict[str, int]:
