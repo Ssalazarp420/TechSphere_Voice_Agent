@@ -46,10 +46,17 @@ class GeminiResponder:
         result = self._client.models.generate_content(
             model=self.model_name,
             contents=prompt,
-            # Gemini 3.x deprecó temperature/top_p/top_k (se recomienda dejar los
-            # valores por defecto, optimizados para su razonamiento). Solo fijamos
-            # max_output_tokens, que sigue siendo válido.
-            config=types.GenerateContentConfig(max_output_tokens=220),
+            config=types.GenerateContentConfig(
+                max_output_tokens=800,
+                # Gemini 3.x razona internamente ("thinking") antes de responder, y ese
+                # razonamiento consume parte del presupuesto de max_output_tokens. Con
+                # el nivel por defecto, casi todo el presupuesto se iba en pensar y la
+                # respuesta visible quedaba cortada a media frase. Para una respuesta
+                # corta y conversacional como esta, "minimal" prioriza velocidad y deja
+                # el presupuesto completo para el texto real — además baja bastante la
+                # latencia, importante en una llamada de voz en tiempo real.
+                thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
+            ),
         )
         text = getattr(result, "text", None) or ""
         if not text.strip():

@@ -21,4 +21,6 @@ RAG	ChromaDB + BGE-M3	Local, gratis, embeddings fuertes en español
 Backend	FastAPI (Python)	WebSockets nativos para streaming de audio
 Frontend	HTML/JS simple (Web Audio API)
 
-Carga de frontend http://localhost:8000/call
+
+Levantar backend: uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+Carga de frontend: http://localhost:8000/call

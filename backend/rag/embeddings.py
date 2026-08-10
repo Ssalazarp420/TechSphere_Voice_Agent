@@ -99,6 +99,13 @@ class SentenceTransformerEmbeddingFunction(EmbeddingFunction[Documents]):
         if self.device:
             kwargs["device"] = self.device
 
+        # Fix para "Cannot copy out of meta tensor; no data!": con ciertas
+        # combinaciones de versiones de torch/transformers/accelerate, la carga
+        # "rápida" del modelo (low_cpu_mem_usage=True, el default de transformers)
+        # inicializa los parámetros en un meta-tensor y falla al materializarlos en
+        # CPU. Forzamos la carga clásica para evitar esa ruta.
+        kwargs["model_kwargs"] = {"low_cpu_mem_usage": False}
+
         return SentenceTransformer(self.model_name, **kwargs)
 
     def __call__(self, input: Documents) -> Embeddings:
