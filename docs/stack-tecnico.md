@@ -109,19 +109,22 @@ servidores. Es ligera y se integra con Python o JavaScript.
 
 → [Documentación de ChromaDB](https://www.trychroma.com/)
 
-### BGE-M3 — embeddings en español
+### paraphrase-multilingual-MiniLM-L12-v2 — embeddings en español
 
-El componente crítico para la precisión. BGE-M3 es un modelo de embeddings multilingüe
-que sobresale en español: entiende sinónimos médicos y conceptos complejos en nuestro
-idioma, lo que asegura que lo recuperado del RAG sea realmente relevante para la consulta
-del paciente.
+El componente crítico para la precisión. Es un modelo de embeddings multilingüe
+que entiende sinónimos médicos y conceptos complejos en español, lo que asegura que lo
+recuperado del RAG sea realmente relevante para la consulta del paciente. Se eligió por
+sobre alternativas más pesadas como BGE-M3 (~2.2GB) porque corre de forma confiable en
+equipos con RAM limitada mientras mantiene buena calidad semántica en recuperación
+multilingüe; el sistema permite forzar BGE-M3 vía `EMBEDDING_MODEL` en equipos con más
+recursos.
 
-→ [Ver BGE-M3 en Hugging Face](https://huggingface.co/BAAI/bge-m3)
+→ [Ver el modelo en Hugging Face](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2)
 
 ### El flujo de conocimiento
 
 1. Consulta del paciente en español.
-2. BGE-M3 busca en ChromaDB el protocolo pertinente.
+2. El modelo de embeddings busca en ChromaDB el protocolo pertinente.
 3. Se inyecta el texto médico recuperado al modelo.
 4. Respuesta fundamentada, sin alucinaciones.
 

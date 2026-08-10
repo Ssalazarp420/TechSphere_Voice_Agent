@@ -15,7 +15,7 @@ Ver [arquitectura.md](arquitectura.md) para el diagrama y el flujo de decisión.
 
 - FastAPI como backend principal.
 - ChromaDB como base vectorial local.
-- BGE-M3 como embedding local para recuperación semántica, con fallback hash para entornos sin descarga de modelos.
+- `paraphrase-multilingual-MiniLM-L12-v2` como embedding local para recuperación semántica (BGE-M3 disponible como alternativa opcional para equipos con más RAM), con fallback hash para entornos sin descarga de modelos.
 - Reglas de triaje inicial para la clasificación verde, amarillo y rojo.
 - Persistencia local para documentos administrados y sesiones de llamada.
 

@@ -49,7 +49,9 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
 
 Copia .env.example a .env y ajusta los valores si vas a conectar modelos o servicios externos.
 
-Si tu entorno no puede descargar el modelo semántico la primera vez, deja `EMBEDDING_BACKEND=auto` para que use BGE-M3 cuando esté disponible y caiga al hash como respaldo. Si quieres forzar el índice semántico, usa `EMBEDDING_BACKEND=sentence-transformers`.
+Si tu entorno no puede descargar el modelo semántico la primera vez, deja `EMBEDDING_BACKEND=auto` para que use el modelo local cuando esté disponible y caiga al hash como respaldo. Si quieres forzar el índice semántico, usa `EMBEDDING_BACKEND=sentence-transformers`.
+
+Por defecto se usa `paraphrase-multilingual-MiniLM-L12-v2` (~470MB) en vez de BGE-M3 (~2.2GB) porque BGE-M3 puede agotar la RAM o tardar horas en equipos modestos durante la indexación. El índice ya viene pre-construido con MiniLM en `backend/data/chroma/` — no hace falta reindexar salvo que agregues documentos nuevos. Si tu máquina tiene RAM de sobra puedes forzar BGE-M3 con `EMBEDDING_MODEL=BAAI/bge-m3` en tu `.env`, pero tendrías que reindexar el corpus completo (las dimensiones de los vectores cambian).
 
 ## GitHub
 
@@ -84,7 +86,7 @@ El repositorio ya incluye una primera versión funcional de las dos superficies 
 
 Además, el corpus clínico ya está inventariado e indexado localmente, con trazabilidad por documento y soporte explícito para PDFs escaneados que aún no pueden procesarse sin OCR.
 
-La capa de RAG usa ChromaDB con BGE-M3 como embedding local por defecto y conserva un fallback hash para entornos sin descarga de modelos.
+La capa de RAG usa ChromaDB con `paraphrase-multilingual-MiniLM-L12-v2` como embedding local por defecto (con BGE-M3 disponible como alternativa opcional para equipos con más RAM) y conserva un fallback hash para entornos sin descarga de modelos. El índice ya viene pre-construido en el repo.
 
 ## Arquitectura actual
 

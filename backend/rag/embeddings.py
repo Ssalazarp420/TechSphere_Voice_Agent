@@ -72,7 +72,7 @@ class SentenceTransformerEmbeddingFunction(EmbeddingFunction[Documents]):
         normalize_embeddings: bool | None = None,
         trust_remote_code: bool | None = None,
     ) -> None:
-        self.model_name = model_name or os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
+        self.model_name = model_name or os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
         self.device = device or os.getenv("EMBEDDING_DEVICE") or None
         self.batch_size = batch_size or _read_env_int("EMBEDDING_BATCH_SIZE", 16)
         self.normalize_embeddings = (
