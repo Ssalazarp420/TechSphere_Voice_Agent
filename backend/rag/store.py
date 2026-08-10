@@ -66,12 +66,34 @@ class CorpusVectorStore:
             "embedding_dimensions": self.embedding_dimensions,
         }
 
-    def ingest_corpus(self, corpus_root: Path) -> dict[str, int]:
+    def ingest_corpus(self, corpus_root: Path, batch_size: int = 64, progress: bool = True) -> dict[str, int]:
         indexed_chunks = 0
         skipped_documents = 0
         scanned_documents = 0
 
-        for pdf_path in sorted(corpus_root.rglob("*.pdf")):
+        pdf_paths = sorted(corpus_root.rglob("*.pdf"))
+        total_pdfs = len(pdf_paths)
+
+        batch_ids: list[str] = []
+        batch_documents: list[str] = []
+        batch_metadatas: list[dict[str, object]] = []
+
+        def flush_batch() -> None:
+            if not batch_ids:
+                return
+            self.collection.upsert(
+                ids=list(batch_ids),
+                documents=list(batch_documents),
+                metadatas=list(batch_metadatas),
+            )
+            batch_ids.clear()
+            batch_documents.clear()
+            batch_metadatas.clear()
+
+        for pdf_index, pdf_path in enumerate(pdf_paths, start=1):
+            if progress:
+                print(f"[{pdf_index}/{total_pdfs}] {pdf_path.name}", flush=True)
+
             inspection = inspect_pdf(pdf_path)
             if not inspection.has_text:
                 scanned_documents += 1
@@ -92,12 +114,15 @@ class CorpusVectorStore:
                     "pages": inspection.pages,
                     "has_text": inspection.has_text,
                 }
-                self.collection.upsert(
-                    ids=[chunk_id],
-                    documents=[chunk.text],
-                    metadatas=[metadata],
-                )
+                batch_ids.append(chunk_id)
+                batch_documents.append(chunk.text)
+                batch_metadatas.append(metadata)
                 indexed_chunks += 1
+
+                if len(batch_ids) >= batch_size:
+                    flush_batch()
+
+        flush_batch()
 
         return {
             "indexed_chunks": indexed_chunks,
