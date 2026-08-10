@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from backend.decision.rules import classify_report
 from backend.llm.service import GeminiResponder, LLMResponse
 from backend.rag.store import CorpusVectorStore
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -68,8 +71,12 @@ class CallOrchestrator:
         try:
             llm_response = self.llm.generate(remote_prompt)
             return llm_response.text, llm_response.model_name, llm_response.used_remote_model
-        except Exception:
-            pass
+        except Exception as exc:
+            # No dejar caer esto en silencio: si Gemini falla (API key inválida,
+            # cuota agotada, error de red), el sistema sigue funcionando con la
+            # plantilla local, pero eso debe quedar visible en el log para poder
+            # diagnosticarlo — no confundirlo con un turno realmente atendido por el LLM.
+            logger.warning("Gemini no disponible, usando respuesta local de respaldo: %s", exc)
 
         label = str(decision["label"])
         if label == "rojo":

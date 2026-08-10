@@ -13,11 +13,13 @@ obligaciones, y puedes usar otras si lo consideras.
 
 ## 1. Los modelos permitidos
 
-El modelo de lenguaje que razona en tu agente debe ser **uno de estos**:
+El modelo de lenguaje que razona en tu agente debe pertenecer a una de estas **familias**
+(la rúbrica evalúa familia y proveedor, no un snapshot puntual — los modelos vencen, las
+familias no):
 
-| Modelo | Dónde corre | Detalle |
+| Familia / modelo vigente | Dónde corre | Detalle |
 |---|---|---|
-| **Google Gemini 1.5 Flash** | Nube, nivel gratuito | [§2](#2-inferencia-en-la-nube-niveles-gratuitos) |
+| **Google Gemini, gama Flash** (actualmente `gemini-2.5-flash`) | Nube, nivel gratuito | [§2](#2-inferencia-en-la-nube-niveles-gratuitos) |
 | **Llama 3.1 70B** (vía Groq) | Nube, nivel gratuito | [§2](#2-inferencia-en-la-nube-niveles-gratuitos) |
 | **Llama 3.2** (1B o 3B) | Local, CPU | [§3](#3-modelos-locales-para-cpu) |
 | **Phi-3.5 Mini** (3.8B) | Local, CPU | [§3](#3-modelos-locales-para-cpu) |
@@ -39,9 +41,11 @@ herramientas de este documento.
 
 Para razonamiento complejo o ventanas de contexto grandes sin hardware local costoso.
 
-### Google Gemini 1.5 Flash — 15 RPM gratis
+### Google Gemini, gama Flash — 15 RPM gratis
 
-Su ventaja competitiva es la **ventana de contexto de 1 millón de tokens**: permite
+Usamos `gemini-2.5-flash` (Gemini 1.5 Flash, el snapshot original, fue retirado por
+Google — toda la familia 1.5 devuelve 404 desde su descontinuación). Su ventaja
+competitiva es la **ventana de contexto de 1 millón de tokens**: permite
 cargar múltiples guías de práctica clínica, protocolos de triaje y el historial completo
 del paciente en una sola consulta, sin fragmentar la información en exceso, lo que
 preserva la coherencia del razonamiento médico.

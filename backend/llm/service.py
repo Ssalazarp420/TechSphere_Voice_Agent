@@ -13,7 +13,12 @@ class LLMResponse:
 
 class GeminiResponder:
     def __init__(self, model_name: str | None = None) -> None:
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", os.getenv("MODEL_NAME", "gemini-1.5-flash"))
+        # Gemini 1.5 (toda la familia) fue retirado por Google y devuelve 404 en
+        # cualquier llamada — ver https://ai.google.dev/gemini-api/docs/deprecations.
+        # La rúbrica del reto (G3) exige una FAMILIA permitida (Gemini Flash), no un
+        # snapshot puntual, así que migramos a la generación Flash vigente en vez de
+        # cambiar de familia de modelo.
+        self.model_name = model_name or os.getenv("GEMINI_MODEL", os.getenv("MODEL_NAME", "gemini-2.5-flash"))
         self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
         self.available = bool(self.api_key)
         self._model = None

@@ -20,3 +20,5 @@ TTS	Kokoro-82M o Piper (español)	Local, gratis, buena calidad
 RAG	ChromaDB + BGE-M3	Local, gratis, embeddings fuertes en español
 Backend	FastAPI (Python)	WebSockets nativos para streaming de audio
 Frontend	HTML/JS simple (Web Audio API)
+
+Carga de frontend http://localhost:8000/call
