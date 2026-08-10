@@ -125,7 +125,7 @@ python backend/scripts/smoke_test.py
 
 ## Nota sobre el modelo
 
-La capa de llamada ya está preparada para usar uno de los modelos permitidos por `docs/stack-tecnico.md`. Por defecto queda lista para Gemini 2.5 Flash (Gemini 1.5 Flash fue retirado por Google; la rúbrica exige familia, no snapshot puntual) y, si no hay clave, cae a un fallback local para que el repo siga siendo ejecutable.
+La capa de llamada ya está preparada para usar uno de los modelos permitidos por `docs/stack-tecnico.md`. Por defecto queda lista para Gemini 3.5 Flash (Gemini 1.5 Flash fue retirado por Google, y Gemini 2.5 Flash dejó de estar disponible para API keys nuevas; la rúbrica exige familia, no snapshot puntual) y, si no hay clave, cae a un fallback local para que el repo siga siendo ejecutable.
 
 ---
 

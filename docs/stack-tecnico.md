@@ -19,7 +19,7 @@ familias no):
 
 | Familia / modelo vigente | Dónde corre | Detalle |
 |---|---|---|
-| **Google Gemini, gama Flash** (actualmente `gemini-2.5-flash`) | Nube, nivel gratuito | [§2](#2-inferencia-en-la-nube-niveles-gratuitos) |
+| **Google Gemini, gama Flash** (actualmente `gemini-3.5-flash`) | Nube, nivel gratuito | [§2](#2-inferencia-en-la-nube-niveles-gratuitos) |
 | **Llama 3.1 70B** (vía Groq) | Nube, nivel gratuito | [§2](#2-inferencia-en-la-nube-niveles-gratuitos) |
 | **Llama 3.2** (1B o 3B) | Local, CPU | [§3](#3-modelos-locales-para-cpu) |
 | **Phi-3.5 Mini** (3.8B) | Local, CPU | [§3](#3-modelos-locales-para-cpu) |
@@ -43,8 +43,8 @@ Para razonamiento complejo o ventanas de contexto grandes sin hardware local cos
 
 ### Google Gemini, gama Flash — 15 RPM gratis
 
-Usamos `gemini-2.5-flash` (Gemini 1.5 Flash, el snapshot original, fue retirado por
-Google — toda la familia 1.5 devuelve 404 desde su descontinuación). Su ventaja
+Usamos `gemini-3.5-flash` (Gemini 1.5 Flash fue retirado por Google, y Gemini 2.5
+Flash —el primer reemplazo probado— dejó de estar disponible para API keys nuevas). Su ventaja
 competitiva es la **ventana de contexto de 1 millón de tokens**: permite
 cargar múltiples guías de práctica clínica, protocolos de triaje y el historial completo
 del paciente en una sola consulta, sin fragmentar la información en exceso, lo que

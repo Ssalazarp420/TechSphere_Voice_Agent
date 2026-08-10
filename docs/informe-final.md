@@ -21,7 +21,7 @@ Ver [arquitectura.md](arquitectura.md) para el diagrama y el flujo de decisión.
 
 ## 4. Modelo usado
 
-Gemini 2.5 Flash, porque está dentro de la familia permitida por la rúbrica (Gemini, gama Flash), ofrece una ventana de contexto amplia para combinar historial, decisión y referencias del RAG, y ya está integrado con fallback local para mantener el repositorio ejecutable sin clave. Se usa esta generación puntual porque Gemini 1.5 Flash —el snapshot originalmente elegido— fue retirado por Google (toda la familia 1.5 devuelve 404 desde su descontinuación); la rúbrica (G3) exige pertenecer a una familia permitida, no a un snapshot congelado, así que la migración a la generación Flash vigente no afecta el cumplimiento de la compuerta.
+Gemini 3.5 Flash, porque está dentro de la familia permitida por la rúbrica (Gemini, gama Flash), ofrece una ventana de contexto amplia para combinar historial, decisión y referencias del RAG, y ya está integrado con fallback local para mantener el repositorio ejecutable sin clave. Se usa esta generación puntual porque los snapshots anteriores dejaron de estar disponibles en cadena: Gemini 1.5 Flash fue retirado por Google (toda la familia 1.5 devuelve 404), y Gemini 2.5 Flash —el primer reemplazo probado— resultó no estar disponible para API keys nuevas ("no longer available to new users"). La rúbrica (G3) exige pertenecer a una familia permitida, no a un snapshot congelado, así que ninguna de estas migraciones afecta el cumplimiento de la compuerta. De paso se migró del SDK `google-generativeai` (deprecado desde Gemini 2.0) al SDK unificado vigente `google-genai`, para evitar incompatibilidades con la familia 3.x.
 
 ## 5. Evidencia del proceso
 

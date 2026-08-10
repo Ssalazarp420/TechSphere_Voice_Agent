@@ -14,34 +14,42 @@ class LLMResponse:
 class GeminiResponder:
     def __init__(self, model_name: str | None = None) -> None:
         # Gemini 1.5 (toda la familia) fue retirado por Google y devuelve 404 en
-        # cualquier llamada — ver https://ai.google.dev/gemini-api/docs/deprecations.
+        # cualquier llamada. Gemini 2.5 Flash tampoco está disponible para API keys
+        # nuevas ("no longer available to new users"), así que migramos directo a
+        # Gemini 3.5 Flash (generación vigente, GA, sin fecha de retiro anunciada).
         # La rúbrica del reto (G3) exige una FAMILIA permitida (Gemini Flash), no un
-        # snapshot puntual, así que migramos a la generación Flash vigente en vez de
-        # cambiar de familia de modelo.
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", os.getenv("MODEL_NAME", "gemini-2.5-flash"))
+        # snapshot puntual — ver https://ai.google.dev/gemini-api/docs/deprecations.
+        self.model_name = model_name or os.getenv("GEMINI_MODEL", os.getenv("MODEL_NAME", "gemini-3.5-flash"))
         self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
         self.available = bool(self.api_key)
-        self._model = None
+        self._client = None
 
         if self.available:
-            import google.generativeai as genai
+            # El paquete google-generativeai está deprecado desde Gemini 2.0 en favor
+            # del SDK unificado google-genai (ver
+            # https://github.com/google-gemini/deprecated-generative-ai-python). Usamos
+            # el SDK vigente para que los modelos Gemini 3.x funcionen de forma
+            # confiable en vez de arriesgar incompatibilidades con el SDK legado.
+            from google import genai
 
-            genai.configure(api_key=self.api_key)
-            self._model = genai.GenerativeModel(self.model_name)
+            self._client = genai.Client(api_key=self.api_key)
 
     def is_available(self) -> bool:
-        return self.available and self._model is not None
+        return self.available and self._client is not None
 
     def generate(self, prompt: str) -> LLMResponse:
         if not self.is_available():
             raise RuntimeError("Gemini no está disponible en este entorno")
 
-        result = self._model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.2,
-                "max_output_tokens": 220,
-            },
+        from google.genai import types
+
+        result = self._client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            # Gemini 3.x deprecó temperature/top_p/top_k (se recomienda dejar los
+            # valores por defecto, optimizados para su razonamiento). Solo fijamos
+            # max_output_tokens, que sigue siendo válido.
+            config=types.GenerateContentConfig(max_output_tokens=220),
         )
         text = getattr(result, "text", None) or ""
         if not text.strip():
