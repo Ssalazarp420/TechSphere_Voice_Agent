@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -23,6 +23,7 @@ from backend.agent.orchestrator import CallOrchestrator
 from backend.admin.service import AdminDocumentService
 from backend.call.service import CallSessionService
 from backend.rag.store import CorpusVectorStore
+from backend.stt.service import GroqWhisperTranscriber
 
 
 def get_vector_store() -> CorpusVectorStore:
@@ -39,6 +40,10 @@ def get_call_orchestrator() -> CallOrchestrator:
 
 def get_call_session_service() -> CallSessionService:
     return CallSessionService(root_dir=ROOT_DIR)
+
+
+def get_transcriber() -> GroqWhisperTranscriber:
+    return GroqWhisperTranscriber()
 
 
 class SearchRequest(BaseModel):
@@ -128,6 +133,52 @@ def call_turn_with_session(payload: CallTurnWithSessionRequest):
         return service.turn(payload.session_id, payload.utterance)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/stt/status")
+def stt_status():
+    transcriber = get_transcriber()
+    return {
+        "available": transcriber.is_available(),
+        "model": transcriber.model_name,
+        "language": transcriber.language,
+    }
+
+
+@app.post("/call/session/turn/audio")
+async def call_turn_with_audio(
+    session_id: str = Form(...),
+    audio: UploadFile = File(...),
+):
+    transcriber = get_transcriber()
+    if not transcriber.is_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Groq STT no está configurado (falta GROQ_API_KEY). Usa el texto manual mientras tanto.",
+        )
+
+    audio_bytes = await audio.read()
+    try:
+        transcription = transcriber.transcribe(audio_bytes, filename=audio.filename or "audio.webm")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=f"Error al transcribir con Groq: {exc}") from exc
+
+    if not transcription.text:
+        raise HTTPException(status_code=422, detail="No se detectó texto en el audio enviado.")
+
+    service = get_call_session_service()
+    try:
+        result = service.turn(session_id, transcription.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return {
+        **result,
+        "stt_model": transcription.model_name,
+        "stt_language": transcription.language,
+    }
 
 
 @app.get("/call/session/{session_id}")
