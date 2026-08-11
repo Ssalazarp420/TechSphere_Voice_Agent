@@ -31,9 +31,11 @@ class CallTurnResult:
 
 
 class CallOrchestrator:
-    def __init__(self, root_dir: Path) -> None:
+    def __init__(self, root_dir: Path, vector_store: CorpusVectorStore | None = None) -> None:
         self.root_dir = root_dir
-        self.store = CorpusVectorStore(root_dir=root_dir)
+        # Igual que en AdminDocumentService: usar la instancia compartida evita
+        # recargar el modelo de embeddings por cada turno de llamada.
+        self.store = vector_store if vector_store is not None else CorpusVectorStore(root_dir=root_dir)
         self.llm = GeminiResponder()
 
     def start_call(self) -> dict[str, object]:

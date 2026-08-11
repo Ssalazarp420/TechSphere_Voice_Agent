@@ -33,14 +33,18 @@ class ManagedDocument:
 
 
 class AdminDocumentService:
-    def __init__(self, root_dir: Path) -> None:
+    def __init__(self, root_dir: Path, vector_store: CorpusVectorStore | None = None) -> None:
         self.root_dir = root_dir
         self.data_dir = root_dir / "backend" / "data"
         self.upload_dir = self.data_dir / "admin_uploads"
         self.registry_path = self.data_dir / "admin_registry.json"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.vector_store = CorpusVectorStore(root_dir=root_dir)
+        # Recibe la instancia compartida desde main.py para no cargar el modelo de
+        # embeddings otra vez (era la causa de que cada subida pareciera colgada:
+        # se reconstruía SentenceTransformer desde disco en cada petición). Si no
+        # se pasa una (uso directo desde un script), crea la suya propia.
+        self.vector_store = vector_store if vector_store is not None else CorpusVectorStore(root_dir=root_dir)
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()

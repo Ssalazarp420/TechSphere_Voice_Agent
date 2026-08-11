@@ -106,7 +106,29 @@ class SentenceTransformerEmbeddingFunction(EmbeddingFunction[Documents]):
         # CPU. Forzamos la carga clásica para evitar esa ruta.
         kwargs["model_kwargs"] = {"low_cpu_mem_usage": False}
 
-        return SentenceTransformer(self.model_name, **kwargs)
+        try:
+            return SentenceTransformer(self.model_name, **kwargs)
+        except NotImplementedError as exc:
+            if "meta tensor" not in str(exc).lower():
+                raise
+            # El low_cpu_mem_usage=False de arriba solo tiene efecto si
+            # `accelerate` NO está instalado, o si `accelerate` respeta ese flag.
+            # Cuando `accelerate` está presente en el entorno (residuo de un
+            # intento anterior, o instalado por otra librería) puede seguir
+            # forzando la inicialización en "meta device" sin datos reales.
+            # Verificado: en nuestro entorno de referencia sin `accelerate`
+            # instalado esto nunca ocurre. En vez de dejar caer el traceback
+            # crudo de PyTorch (que no dice qué hacer), se falla con la causa y
+            # el comando exacto para resolverlo.
+            raise RuntimeError(
+                "No se pudo cargar el modelo de embeddings por un error conocido de "
+                "PyTorch/transformers ('Cannot copy out of meta tensor'). Esto casi "
+                "siempre significa que el paquete `accelerate` está instalado en tu "
+                "entorno y fuerza una ruta de carga incompatible. Solución: "
+                "`pip uninstall accelerate -y` dentro de tu entorno virtual y vuelve a "
+                "intentar (no es una dependencia de este proyecto). Si el problema "
+                "persiste, usa EMBEDDING_BACKEND=hash temporalmente para no bloquearte."
+            ) from exc
 
     def __call__(self, input: Documents) -> Embeddings:
         documents = [document.strip() for document in input]
