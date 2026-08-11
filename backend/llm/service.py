@@ -9,6 +9,9 @@ class LLMResponse:
     text: str
     model_name: str
     used_remote_model: bool
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
 
 class GeminiResponder:
@@ -61,4 +64,24 @@ class GeminiResponder:
         text = getattr(result, "text", None) or ""
         if not text.strip():
             raise RuntimeError("Gemini devolvió una respuesta vacía")
-        return LLMResponse(text=text.strip(), model_name=self.model_name, used_remote_model=True)
+
+        # usage_metadata trae el conteo real de tokens que factura Google, necesario
+        # para el reporte obligatorio de consumo (§5 de la rúbrica). Los campos
+        # pueden venir en None según la respuesta, de ahí el "or 0" defensivo.
+        usage = getattr(result, "usage_metadata", None)
+        input_tokens = getattr(usage, "prompt_token_count", None) or 0
+        output_tokens = getattr(usage, "candidates_token_count", None) or 0
+        thoughts_tokens = getattr(usage, "thoughts_token_count", None) or 0
+        total_tokens = getattr(usage, "total_token_count", None) or (input_tokens + output_tokens + thoughts_tokens)
+
+        return LLMResponse(
+            text=text.strip(),
+            model_name=self.model_name,
+            used_remote_model=True,
+            input_tokens=input_tokens,
+            # El thinking interno de Gemini 3.x también consume tokens de salida
+            # facturables aunque no aparezcan en el texto visible; se suman aquí
+            # para que el consumo reportado no quede subestimado.
+            output_tokens=output_tokens + thoughts_tokens,
+            total_tokens=total_tokens,
+        )

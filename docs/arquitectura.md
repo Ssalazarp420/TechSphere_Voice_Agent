@@ -94,3 +94,6 @@ flowchart TD
 - El RAG usa un índice local con persistencia para no depender del entorno de ejecución.
 - La decisión clínica está desacoplada de la respuesta conversacional para permitir reemplazar reglas por un LLM o clasificador más adelante.
 - La llamada persiste sesiones para que el demo y el informe puedan mostrar trazabilidad observable.
+- **Asimetría clínica explícita**: `classify_report` no decide "verde" por defecto ante lenguaje ambiguo, regional o sin síntomas reconocibles — lo marca como `requires_clarification` y obliga a indagar antes de tranquilizar. Las negaciones ("sin dolor", "no tengo fiebre") se detectan para no convertir un reporte tranquilo en un falso positivo.
+- **Prompt del orquestador endurecido contra inyección**: el turno del paciente se delimita explícitamente como dato a interpretar, nunca como instrucción, con reglas de seguridad que tienen prioridad sobre cualquier contenido embebido en ese texto.
+- **Observabilidad de costo/consumo**: cada turno registra tokens de entrada/salida reales (`usage_metadata` de Gemini), invocaciones al modelo, y latencia separada por etapa (STT vs. RAG+LLM) para sostener las métricas que pide la rúbrica sin recalcularlas dos veces (`CallSessionService.global_metrics()` es la única fuente para `/metrics` y para `collect_metrics.py`).

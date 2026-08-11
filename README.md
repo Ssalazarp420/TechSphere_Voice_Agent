@@ -14,20 +14,34 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
 
 ## Requisitos
 
-- Python 3.11+
-- pip
+- **Python 3.11, 3.12 o 3.13.** Evita 3.14: al momento de escribir esto es una versión
+  muy reciente y `tokenizers` (dependencia de `transformers`/`sentence-transformers`)
+  todavía no publica wheel precompilado para ella, así que `pip install` intenta
+  compilarlo desde código Rust y falla si no tienes el toolchain de Rust/Cargo
+  instalado. `backend/requirements.txt` ya usa un rango (`transformers>=4.46.3,<5.0.0`)
+  en vez de una versión exacta para no forzar un downgrade de `tokenizers` a una
+  versión sin wheel, pero la versión de Python la eliges tú al crear el entorno.
+- pip (o [`uv`](https://docs.astral.sh/uv/), más rápido y con gestión de versiones de
+  Python integrada — así se probó este repo)
 
 ## Levantamiento rápido
 
-1. Crear entorno virtual
+1. Crear entorno virtual con una versión de Python soportada
    ```bash
+   # Opción A: venv estándar (usa el intérprete de Python que tengas apuntando a 3.11-3.13)
    python -m venv .venv
-   .venv\\Scripts\\activate
+   source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+   # Opción B: uv (descarga automáticamente Python 3.12 si no lo tienes)
+   uv venv --python 3.12 .venv
+   source .venv/bin/activate        # Windows: .venv\Scripts\activate
    ```
 
 2. Instalar dependencias
    ```bash
    pip install -r backend/requirements.txt
+   # o, con uv:
+   uv pip install --python .venv/bin/python -r backend/requirements.txt
    ```
 
 3. Generar el catálogo e indexar el corpus
@@ -88,6 +102,8 @@ Además, el corpus clínico ya está inventariado e indexado localmente, con tra
 
 La capa de RAG usa ChromaDB con `paraphrase-multilingual-MiniLM-L12-v2` como embedding local por defecto (con BGE-M3 disponible como alternativa opcional para equipos con más RAM) y conserva un fallback hash para entornos sin descarga de modelos. El índice ya viene pre-construido en el repo.
 
+La lógica de decisión (`backend/decision/rules.py`) no solo detecta banderas rojas/amarillas explícitas: también reconoce negaciones ("sin fiebre" no cuenta como fiebre) y lenguaje ambiguo o regional que no calza con ninguna keyword clínica (el ejemplo de este mismo README, *"me duele como aquí abajito de la axila"*) — en ese caso no asume "verde" por defecto, lo trata como señal amarilla y genera una pregunta de seguimiento concreta antes de tranquilizar al paciente. El prompt del orquestador (`backend/agent/orchestrator.py`) trata el turno del paciente explícitamente como dato a interpretar, no como instrucciones, y está probado contra intentos de inyección (pedir el system prompt, cambiar de rol, recomendar dosis peligrosas).
+
 ## Arquitectura actual
 
 - `backend/rag/`: inventario del corpus, extracción de texto, chunking e índice vectorial local
@@ -99,19 +115,54 @@ La capa de RAG usa ChromaDB con `paraphrase-multilingual-MiniLM-L12-v2` como emb
 
 ## Métricas observables disponibles
 
-Ya puedes contrastar en tiempo de ejecución:
+`GET /metrics` agrega, en vivo y a partir de las sesiones persistidas en
+`backend/data/call_sessions.json`, todo lo que la rúbrica exige reportar (§5):
 
-- Documentos del corpus total, con texto y escaneados
-- Cantidad de fragmentos indexados
-- Documentos administrativos activos
-- Turnos por llamada y referencias recuperadas
-- Decisión clínica preliminar por turno
-- Latencia media y p95 de los turnos de llamada
-- Modelo usado por turno y cantidad de turnos atendidos por Gemini
+- **Latencia P50 y P95**, medida desde que el paciente termina de hablar hasta que
+  empieza a sonar el audio del agente (`avg/p50/p95_end_to_end_latency_ms`, que suma
+  la transcripción de Groq Whisper + la búsqueda RAG + la generación de Gemini). Para
+  turnos de texto manual, sin STT, se reporta también `avg/p50/p95_turn_latency_ms`
+  (solo RAG + LLM) por separado.
+- **Tokens de entrada y salida** por turno y acumulados por llamada (`input_tokens`,
+  `output_tokens`, `total_tokens`, leídos del `usage_metadata` real que devuelve Gemini,
+  no estimados).
+- **Invocaciones al modelo por turno**: siempre 1 (una sola llamada a Gemini por turno,
+  sin reintentos) — expuesto como dato (`model_invocations`), no solo documentado en el
+  código.
+- **Consultas al RAG por llamada** (`rag_queries`): una búsqueda vectorial por cada
+  turno del paciente que pasa por el orquestador.
+- **Costo estimado por llamada** (`estimated_cost_per_call_usd`), extrapolando a precios
+  de producción de Gemini Flash y Groq Whisper. Las tarifas usadas están en
+  `pricing_assumptions` dentro de la misma respuesta y son configurables por variable de
+  entorno (`GEMINI_INPUT_PRICE_PER_1M_USD`, `GEMINI_OUTPUT_PRICE_PER_1M_USD`,
+  `GROQ_STT_PRICE_PER_MINUTE_USD`) — verifica la tarifa vigente en Google AI Studio /
+  Groq Console antes de citar el número como definitivo, las tarifas cambian.
+- Además: documentos del corpus (con/sin texto), fragmentos indexados, documentos
+  administrativos activos, referencias recuperadas y decisión clínica por turno.
 
-Endpoint agregado para revisión rápida: `GET /metrics`
+`backend/scripts/collect_metrics.py` y `GET /metrics` usan **la misma función**
+(`CallSessionService.global_metrics()`) para que el número que reportes acá nunca pueda
+divergir del que el jurado ve en logs — la rúbrica penaliza explícitamente esa
+inconsistencia.
 
-Para dejar un snapshot persistido antes del demo:
+### Snapshot de referencia
+
+Captura real de una tanda de 5 llamadas de verificación local (4 turnos de texto
+cubriendo verde/amarillo/rojo/ambiguo regional, más 1 turno de audio real transcrito por
+Groq Whisper) — no son cifras de producción con tráfico real, son la evidencia de que el
+pipeline de medición funciona extremo a extremo:
+
+| Métrica | Valor |
+|---|---:|
+| P50 latencia end-to-end (audio→respuesta) | 1883 ms |
+| P95 latencia end-to-end | 3048 ms |
+| Tokens de entrada (total / promedio por turno) | 5794 / 1159 |
+| Tokens de salida (total / promedio por turno) | 420 / 84 |
+| Invocaciones al modelo por turno | 1 |
+| Consultas al RAG por llamada | 1 |
+| Costo estimado por llamada | ~US$ 0.00035 |
+
+Para reproducirlo (con el servidor corriendo):
 
 ```bash
 python backend/scripts/collect_metrics.py
