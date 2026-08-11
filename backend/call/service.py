@@ -64,12 +64,16 @@ class CallSession:
 
 
 class CallSessionService:
-    def __init__(self, root_dir: Path) -> None:
+    def __init__(self, root_dir: Path, orchestrator: CallOrchestrator | None = None) -> None:
         self.root_dir = root_dir
         self.data_dir = root_dir / "backend" / "data"
         self.sessions_path = self.data_dir / "call_sessions.json"
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.orchestrator = CallOrchestrator(root_dir=root_dir)
+        # Recibe el orquestador compartido desde main.py (mismo motivo que en
+        # AdminDocumentService: evitar cargar el modelo de embeddings otra vez
+        # por cada turno). Si no se pasa uno (uso directo desde un script), crea
+        # el suyo propio.
+        self.orchestrator = orchestrator if orchestrator is not None else CallOrchestrator(root_dir=root_dir)
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()

@@ -239,55 +239,85 @@
       const formatDate = (value) => new Date(value).toLocaleString('es-CO');
 
       async function loadStatus() {
-        const response = await fetch('/rag/status');
-        const data = await response.json();
-        statusBox.innerHTML = `
-          <strong>${data.indexed_chunks}</strong> fragmentos indexados<br />
-          ${data.text_documents} documentos con texto · ${data.scanned_documents} escaneados<br />
-          ${data.catalog_exists ? 'Catálogo disponible' : 'Catálogo no encontrado'}
-        `;
+        try {
+          const response = await fetch('/rag/status');
+          if (!response.ok) {
+            statusBox.innerHTML = `No se pudo cargar el estado del índice (${response.status}). Revisa la terminal del backend.`;
+            return;
+          }
+          const data = await response.json();
+          statusBox.innerHTML = `
+            <strong>${data.indexed_chunks}</strong> fragmentos indexados<br />
+            ${data.text_documents} documentos con texto · ${data.scanned_documents} escaneados<br />
+            ${data.catalog_exists ? 'Catálogo disponible' : 'Catálogo no encontrado'}
+          `;
+        } catch (error) {
+          statusBox.innerHTML = `Error de red al cargar el estado: ${error.message}`;
+        }
       }
 
       async function loadDocuments() {
-        const response = await fetch('/admin/documents');
-        const data = await response.json();
-        documentsList.innerHTML = '';
+        try {
+          const response = await fetch('/admin/documents');
+          if (!response.ok) {
+            documentsList.innerHTML = `<div class="status error">No se pudo cargar la lista (${response.status}).</div>`;
+            return;
+          }
+          const data = await response.json();
+          documentsList.innerHTML = '';
 
-        if (!data.documents.length) {
-          documentsList.innerHTML = '<div class="status">Todavía no hay documentos administrados.</div>';
-          return;
-        }
+          if (!data.documents.length) {
+            documentsList.innerHTML = '<div class="status">Todavía no hay documentos administrados.</div>';
+            return;
+          }
 
-        for (const document of data.documents) {
-          const element = document.createElement('article');
-          element.className = 'doc';
-          element.innerHTML = `
-            <div class="doc-header">
-              <div>
-                <h3 style="margin-bottom: 4px;">${document.filename}</h3>
-                <div class="meta">${document.chunk_count} fragmentos · ${document.pages} páginas · ${document.category}</div>
+          // Ojo: NO nombrar esta variable "document" — sombrea el objeto global
+          // `document` del DOM y `document.createElement` deja de existir dentro
+          // del bucle, lo que rompía esta función en silencio (sin try/catch no
+          // se veía ningún error: la lista simplemente nunca se actualizaba).
+          for (const doc of data.documents) {
+            const element = document.createElement('article');
+            element.className = 'doc';
+            element.innerHTML = `
+              <div class="doc-header">
+                <div>
+                  <h3 style="margin-bottom: 4px;">${doc.filename}</h3>
+                  <div class="meta">${doc.chunk_count} fragmentos · ${doc.pages} páginas · ${doc.category}</div>
+                </div>
+                <span class="badge available">${doc.status}</span>
               </div>
-              <span class="badge available">${document.status}</span>
-            </div>
-            <div class="meta">Creado: ${formatDate(document.created_at)} · Actualizado: ${formatDate(document.updated_at)}</div>
-            <div class="actions">
-              <button class="danger" type="button" data-delete="${document.document_id}">Eliminar</button>
-            </div>
-          `;
-          documentsList.appendChild(element);
-        }
+              <div class="meta">Creado: ${formatDate(doc.created_at)} · Actualizado: ${formatDate(doc.updated_at)}</div>
+              <div class="actions">
+                <button class="danger" type="button" data-delete="${doc.document_id}">Eliminar</button>
+              </div>
+            `;
+            documentsList.appendChild(element);
+          }
 
-        document.querySelectorAll('[data-delete]').forEach((button) => {
-          button.addEventListener('click', async () => {
-            const documentId = button.getAttribute('data-delete');
-            if (!confirm('¿Eliminar este documento del conocimiento vivo?')) return;
-            const response = await fetch(`/admin/documents/${documentId}`, { method: 'DELETE' });
-            const result = await response.json();
-            showMessage(`Documento eliminado: ${result.filename}`, 'processing');
-            await loadStatus();
-            await loadDocuments();
+          document.querySelectorAll('[data-delete]').forEach((button) => {
+            button.addEventListener('click', async () => {
+              const documentId = button.getAttribute('data-delete');
+              if (!confirm('¿Eliminar este documento del conocimiento vivo?')) return;
+              button.disabled = true;
+              button.textContent = 'Eliminando…';
+              try {
+                const response = await fetch(`/admin/documents/${documentId}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (!response.ok) {
+                  showMessage(result.detail || 'No se pudo eliminar el documento.', 'error');
+                  return;
+                }
+                showMessage(`Documento eliminado: ${result.filename}`, 'processing');
+                await loadStatus();
+                await loadDocuments();
+              } catch (error) {
+                showMessage(`Error de red al eliminar: ${error.message}`, 'error');
+              }
+            });
           });
-        });
+        } catch (error) {
+          documentsList.innerHTML = `<div class="status error">Error de red al cargar documentos: ${error.message}</div>`;
+        }
       }
 
       uploadForm.addEventListener('submit', async (event) => {
@@ -298,21 +328,33 @@
           return;
         }
 
+        const submitButton = uploadForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Procesando…';
+        showMessage('Procesando documento (extracción, chunking e indexado)... puede tardar unos segundos.', 'processing');
+
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('/admin/documents', { method: 'POST', body: formData });
-        const payload = await response.json();
+        try {
+          const response = await fetch('/admin/documents', { method: 'POST', body: formData });
+          const payload = await response.json();
 
-        if (!response.ok) {
-          showMessage(payload.detail || 'No se pudo procesar el documento.', 'error');
-          return;
+          if (!response.ok) {
+            showMessage(payload.detail || 'No se pudo procesar el documento.', 'error');
+            return;
+          }
+
+          showMessage(`Documento procesado y disponible: ${payload.filename} (${payload.chunk_count} fragmentos)`, 'available');
+          fileInput.value = '';
+          await loadStatus();
+          await loadDocuments();
+        } catch (error) {
+          showMessage(`Error de red al subir el documento: ${error.message}`, 'error');
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Procesar y guardar';
         }
-
-        showMessage(`Documento procesado y disponible: ${payload.filename} (${payload.chunk_count} fragmentos)`, 'available');
-        fileInput.value = '';
-        await loadStatus();
-        await loadDocuments();
       });
 
       refreshButton.addEventListener('click', loadDocuments);

@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 from time import perf_counter
 
@@ -27,22 +28,38 @@ from backend.rag.store import CorpusVectorStore
 from backend.stt.service import GroqWhisperTranscriber
 
 
+# @lru_cache(maxsize=1) convierte cada get_*() en un singleton perezoso: la
+# primera petición que lo necesite construye la instancia (y con ella carga el
+# modelo de embeddings, ~470MB, desde disco); todas las peticiones siguientes
+# reciben la misma instancia ya en memoria. Antes cada función creaba una
+# instancia nueva EN CADA PETICIÓN — y CorpusVectorStore recarga el modelo de
+# SentenceTransformer completo en su constructor — así que cada llamada a
+# /admin/documents, /rag/search, /call/session/turn, etc. repetía esa carga
+# desde cero. En Linux con el archivo ya en caché de página no se notaba tanto;
+# en Windows (sin ese caché "caliente", con Windows Defender escaneando cada
+# lectura) esto se sentía como que la subida de un documento se quedaba
+# colgada, cuando en realidad estaba recargando el modelo en cada request.
+@lru_cache(maxsize=1)
 def get_vector_store() -> CorpusVectorStore:
     return CorpusVectorStore(root_dir=ROOT_DIR)
 
 
+@lru_cache(maxsize=1)
 def get_admin_service() -> AdminDocumentService:
-    return AdminDocumentService(root_dir=ROOT_DIR)
+    return AdminDocumentService(root_dir=ROOT_DIR, vector_store=get_vector_store())
 
 
+@lru_cache(maxsize=1)
 def get_call_orchestrator() -> CallOrchestrator:
-    return CallOrchestrator(root_dir=ROOT_DIR)
+    return CallOrchestrator(root_dir=ROOT_DIR, vector_store=get_vector_store())
 
 
+@lru_cache(maxsize=1)
 def get_call_session_service() -> CallSessionService:
-    return CallSessionService(root_dir=ROOT_DIR)
+    return CallSessionService(root_dir=ROOT_DIR, orchestrator=get_call_orchestrator())
 
 
+@lru_cache(maxsize=1)
 def get_transcriber() -> GroqWhisperTranscriber:
     return GroqWhisperTranscriber()
 
