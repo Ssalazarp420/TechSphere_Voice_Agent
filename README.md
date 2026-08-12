@@ -5,6 +5,12 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
 - Consola de administración para gestionar conocimiento clínico
 - Interfaz de llamada para iniciar conversaciones de voz
 
+# URL al video de explicacion
+- https://youtu.be/F3BupdamrUs
+
+## El diagrama esta en "docs/arquitectura.md"
+## El informe final esta en "docs/informe_final.md"
+
 ## Estructura del proyecto
 
 - backend/: API FastAPI
@@ -76,7 +82,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/<tu-usuario>/<tu-repo>.git
+git remote add origin https://github.com/Ssalazarp420/TechSphere_Voice_Agent.git
 git push -u origin main
 ```
 
@@ -345,4 +351,5 @@ ninguna finalidad clínica, diagnóstica ni asistencial fuera de este reto.
 
 ## Contacto
 
-communications@sourcemeridian.com
+ssalazarp@unal.edu.co
+Sebastian Salazar Perez

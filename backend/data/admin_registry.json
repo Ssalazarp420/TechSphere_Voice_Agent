@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "document_id": "9bea7d59bf9d4b90912f9ec4658fb7c3",
+    "filename": "cuidado_postoperatorio_hernioplastia.pdf",
+    "stored_path": "D:\\Documentos\\Github\\TechSphere_Voice_Agent\\backend\\data\\admin_uploads\\9bea7d59bf9d4b90912f9ec4658fb7c3.pdf",
+    "original_name": "cuidado_postoperatorio_hernioplastia.pdf",
+    "status": "available",
+    "created_at": "2026-08-12T01:24:35.517117+00:00",
+    "updated_at": "2026-08-12T01:24:35.517117+00:00",
+    "pages": 2,
+    "chunk_count": 5,
+    "has_text": true,
+    "category": "admin_upload",
+    "chunk_ids": [
+      "admin::9bea7d59bf9d4b90912f9ec4658fb7c3::0",
+      "admin::9bea7d59bf9d4b90912f9ec4658fb7c3::1",
+      "admin::9bea7d59bf9d4b90912f9ec4658fb7c3::2",
+      "admin::9bea7d59bf9d4b90912f9ec4658fb7c3::3",
+      "admin::9bea7d59bf9d4b90912f9ec4658fb7c3::4"
+    ]
+  }
+]
