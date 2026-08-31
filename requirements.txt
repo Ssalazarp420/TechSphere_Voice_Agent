@@ -1,0 +1,27 @@
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-dotenv==1.0.1
+google-genai==2.17.0
+groq==1.6.0
+chromadb==0.5.20
+sentence-transformers==3.3.1
+# Versiones exactas (no rangos) para el stack de embeddings: verificadas juntas
+# en un entorno donde la carga del modelo funciona sin el error "Cannot copy
+# out of meta tensor; no data!" (ver backend/rag/embeddings.py). Un rango
+# abierto aquí permite que pip resuelva combinaciones distintas en cada
+# máquina — que es exactamente lo que causó que funcionara en un entorno y
+# fallara en otro con el mismo código.
+transformers==4.57.6
+tokenizers==0.22.2
+huggingface-hub==0.36.2
+safetensors==0.8.0
+torch==2.13.0
+# NO agregues `accelerate` a este archivo ni lo instales manualmente: no es una
+# dependencia de este proyecto, y su presencia es la causa más probable del
+# error de "meta tensor" en Windows (ver comentario en embeddings.py). Si tu
+# entorno ya lo tiene instalado de un intento anterior, quítalo con
+# `pip uninstall accelerate -y`.
+pandas==2.2.3
+openpyxl==3.1.5
+python-multipart==0.0.12
+pypdf==5.1.0
