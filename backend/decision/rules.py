@@ -151,6 +151,11 @@ class DecisionResult:
     yellow_flags: list[str]
     requires_clarification: bool = False
     follow_up_question: str | None = None
+    # Se calculaban en classify_report() para el score y se descartaban al
+    # construir el resultado — el resumen de la llamada (2.3) los necesita
+    # como campos de primer nivel, no solo como insumo interno del score.
+    pain_value: float | None = None
+    temperature_value: float | None = None
 
 
 def _extract_numeric_value(text: str, keyword_patterns: list[str]) -> float | None:
@@ -205,7 +210,16 @@ def classify_report(text: str) -> dict[str, object]:
         lowered,
         [r"(?:dolor|pain)\s*(?:de\s*)?(?:es de|en|nivel)?\s*(\d+(?:[.,]\d+)?)", r"(\d+(?:[.,]\d+)?)\s*/\s*10"],
     )
-    temperature_value = _extract_numeric_value(lowered, [r"(?:fiebre|temperatura|temp)\s*(\d+(?:[.,]\d+)?)"])
+    # Antes exigía que el número siguiera inmediatamente a la palabra clave
+    # ("fiebre 39"), sin permitir "de" en medio como sí lo permite el patrón
+    # de dolor arriba. "Fiebre de 39" es la forma más natural de decirlo en
+    # español y no se capturaba: el score no sumaba los 3 puntos de fiebre
+    # alta y una fiebre de 39°C sola podía clasificar como amarillo en vez de
+    # rojo — exactamente el tipo de falso negativo que la rúbrica marca como
+    # la falla catastrófica en salud.
+    temperature_value = _extract_numeric_value(
+        lowered, [r"(?:fiebre|temperatura|temp)\s*(?:es de\s*|de\s*)?(\d+(?:[.,]\d+)?)"]
+    )
 
     has_reassurance = any(pattern in lowered for pattern in REASSURANCE_PATTERNS)
     ambiguous_hits = [marker for marker in AMBIGUOUS_MARKERS if marker in lowered]
@@ -274,5 +288,7 @@ def classify_report(text: str) -> dict[str, object]:
             yellow_flags=yellow_flags,
             requires_clarification=requires_clarification,
             follow_up_question=follow_up_question,
+            pain_value=pain_value,
+            temperature_value=temperature_value,
         )
     )

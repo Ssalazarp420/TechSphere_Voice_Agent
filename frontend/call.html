@@ -341,9 +341,20 @@
 
         const symptoms = (summary.symptom_turns || []).map((item) => `<li>${item}</li>`).join('');
         const refs = (summary.reference_documents || []).map((item) => `<li>${item}</li>`).join('');
+        const anomalos = (summary.sintomas_anomalos || []).map((item) => `<li>${item}</li>`).join('');
+        const patient = summary.patient_context;
+        const patientLine = patient
+          ? `<strong>Paciente:</strong> ${patient.nombre_completo} — ${patient.procedimiento} (${patient.fecha_cirugia})<br /><br />`
+          : '';
         summaryList.innerHTML = `
-          <strong>Decisión final:</strong> ${summary.final_decision?.label || 'sin decisión'}<br /><br />
-          <strong>Síntomas registrados:</strong>
+          ${patientLine}
+          <strong>Prioridad de escalamiento:</strong> ${summary.prioridad_escalamiento || 'sin decisión'}<br />
+          <strong>Acción tomada:</strong> ${summary.accion_tomada || 'sin decisión'}<br />
+          <strong>Nivel de dolor reportado:</strong> ${summary.nivel_dolor ?? 'no reportado'}<br />
+          <strong>Temperatura reportada:</strong> ${summary.temperatura ?? 'no reportada'}<br /><br />
+          <strong>Síntomas anómalos detectados:</strong>
+          <ul>${anomalos || '<li>Ninguno</li>'}</ul>
+          <strong>Síntomas registrados (turnos del paciente):</strong>
           <ul>${symptoms || '<li>Sin síntomas aún</li>'}</ul>
           <strong>Documentos citados:</strong>
           <ul>${refs || '<li>Sin referencias aún</li>'}</ul>

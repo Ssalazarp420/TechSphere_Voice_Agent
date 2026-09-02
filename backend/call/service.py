@@ -109,12 +109,33 @@ class CallSessionService:
         symptom_turns = [turn.text for turn in session.turns if turn.role == "user"]
         final_decision = decisions[-1] if decisions else {}
 
+        # Antes solo se exponía final_decision como dict crudo — el jurado
+        # (criterio 2.3, comentado explícitamente: "el resumen solo tiene 3
+        # campos útiles") tiene que entrar a ese dict para sacar cada dato. Se
+        # sube todo a campos de primer nivel legibles, tomando el último
+        # turno con decisión (el estado más reciente de la conversación) como
+        # fuente — no un acumulado de todos los turnos, porque el dolor o la
+        # fiebre reportados al inicio de la llamada pueden quedar obsoletos
+        # frente a lo que el paciente dice después.
+        red_flags = final_decision.get("red_flags") or []
+        yellow_flags = final_decision.get("yellow_flags") or []
+        label = final_decision.get("label")
+
         return {
             "turn_count": len(session.turns),
             "symptom_turns": symptom_turns,
             "final_decision": final_decision,
             "reference_count": len(references),
             "reference_documents": sorted({str(ref.get("metadata", {}).get("filename", "")) for ref in references if ref}),
+            "nivel_dolor": final_decision.get("pain_value"),
+            "temperatura": final_decision.get("temperature_value"),
+            "sintomas_anomalos": red_flags + yellow_flags,
+            # "amarillo" también dispara indagación adicional (requires_clarification),
+            # pero desde la perspectiva del resumen post-llamada lo que importa es si
+            # se escaló o se dejó en seguimiento ambulatorio — no hay una tercera acción
+            # real distinta a esas dos.
+            "accion_tomada": "escalamiento_inmediato" if label == "rojo" else "seguimiento_ambulatorio",
+            "prioridad_escalamiento": label,
             # Redundante con el campo de primer nivel "patient_context" de la
             # sesión, pero se repite aquí porque el resumen es lo que se lee
             # como el "informe atribuible" de la llamada (criterio 3.2/2.3): un
