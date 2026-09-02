@@ -50,7 +50,15 @@ class GeminiResponder:
             model=self.model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
-                max_output_tokens=800,
+                # Bajado de 800 a 200 (criterio 4.1): con el prompt ahora pidiendo
+                # un límite duro de ~12s de voz (2 frases cortas), 200 tokens es
+                # de sobra para el texto real y sigue dejando margen sobre el
+                # thinking mínimo de Gemini 3.x, para no arriesgar un
+                # truncamiento a media frase durante la demo en vivo. Bajarlo
+                # más (p.ej. a 120) ahorra tokens pero reduce ese margen de
+                # seguridad sin ganancia real de brevedad, porque la instrucción
+                # del prompt ya es la que fija el tope de frases.
+                max_output_tokens=200,
                 # Gemini 3.x razona internamente ("thinking") antes de responder, y ese
                 # razonamiento consume parte del presupuesto de max_output_tokens. Con
                 # el nivel por defecto, casi todo el presupuesto se iba en pensar y la
