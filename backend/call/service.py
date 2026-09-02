@@ -42,6 +42,13 @@ class SessionTurn:
     output_tokens: int = 0
     total_tokens: int = 0
     model_invocations: int = 0
+    # None en turnos del paciente (role="user") o en el saludo inicial; en
+    # turnos del agente que sí pasaron por respond(), la fase del flujo
+    # conversacional derivada de la decisión de ese turno (ver
+    # _derive_flow_state en orchestrator.py) — lo que antes no quedaba
+    # registrado en ninguna parte de la sesión.
+    flow_state: str | None = None
+    expected_next: str | None = None
     # None cuando el turno llegó como texto manual (sin paso por STT); con audio,
     # es el tiempo que tardó Groq Whisper en transcribir.
     stt_latency_ms: float | None = None
@@ -311,6 +318,8 @@ class CallSessionService:
         model_invocations: int = 0,
         stt_latency_ms: float | None = None,
         end_to_end_latency_ms: float | None = None,
+        flow_state: str | None = None,
+        expected_next: str | None = None,
     ) -> dict[str, object]:
         payload = self._load_sessions()
         sessions = payload.get("sessions", [])
@@ -335,6 +344,8 @@ class CallSessionService:
                     "model_invocations": model_invocations,
                     "stt_latency_ms": stt_latency_ms,
                     "end_to_end_latency_ms": end_to_end_latency_ms,
+                    "flow_state": flow_state,
+                    "expected_next": expected_next,
                 }
             )
             session["turns"] = turns
@@ -377,6 +388,8 @@ class CallSessionService:
             model_invocations=result.get("model_invocations", 0),
             stt_latency_ms=stt_latency_ms,
             end_to_end_latency_ms=end_to_end_latency_ms,
+            flow_state=result.get("flow_state"),
+            expected_next=result.get("expected_next"),
         )
 
         return {
@@ -392,6 +405,37 @@ class CallSessionService:
         }
 
     def close_session(self, session_id: str) -> dict[str, object]:
+        session_before = self.get_session(session_id)
+
+        # Cierre estructurado con próximos pasos concretos, no solo un cambio
+        # de estado silencioso: antes de este cambio, cerrar la llamada no
+        # producía ningún turno del agente — el paciente se quedaba con la
+        # última pregunta de seguimiento como si fuera el cierre, sin que
+        # nadie le dijera qué pasa después. Se calcula sobre los turnos
+        # existentes (todavía "active") para tomar la decisión final real de
+        # la conversación, no una recién inventada para el cierre.
+        turns_so_far = [SessionTurn(**turn) for turn in session_before.get("turns", [])]
+        preliminary = CallSession(
+            session_id=session_id,
+            created_at=session_before["created_at"],
+            updated_at=self._now(),
+            status="active",
+            turns=turns_so_far,
+            patient_context=session_before.get("patient_context"),
+        )
+        final_decision = self._build_summary(preliminary).get("final_decision")
+        closing_text = self.orchestrator.build_closing_message(
+            final_decision=final_decision,
+            patient_context=session_before.get("patient_context"),
+        )
+        self.append_turn(
+            session_id,
+            "assistant",
+            closing_text,
+            flow_state="cierre",
+            expected_next="llamada_cerrada",
+        )
+
         payload = self._load_sessions()
         for index, session in enumerate(payload.get("sessions", [])):
             if session.get("session_id") != session_id:
@@ -408,6 +452,11 @@ class CallSessionService:
             )
             payload["sessions"][index] = self._serialize_session(closed)
             self._save_sessions(payload)
-            return payload["sessions"][index]
+            result = payload["sessions"][index]
+            # Conveniencia para el frontend: el texto de cierre ya queda como
+            # último turno en "turns", pero exponerlo también aquí evita que
+            # tenga que ir a buscarlo dentro del arreglo para reproducirlo.
+            result["closing_message"] = closing_text
+            return result
 
         raise ValueError("La sesión no existe")

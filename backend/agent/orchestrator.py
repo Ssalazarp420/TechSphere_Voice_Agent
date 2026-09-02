@@ -28,6 +28,36 @@ class CallTurnResult:
     # que el reporte de "invocaciones al modelo por turno" (§5 rúbrica) quede
     # trazable en el dato y no solo en un comentario del código.
     model_invocations: int = 1
+    # Antes "expected_next" solo existía en el saludo inicial ("describe_symptoms",
+    # fijo) y respond() nunca lo volvía a tocar — después del primer turno no
+    # había ninguna señal de en qué parte de la conversación estaba la llamada,
+    # ni en la API ni en los logs. flow_state es la fase real en la que queda el
+    # agente tras este turno; expected_next es lo que se espera del paciente o
+    # del sistema a continuación. No es una máquina de estados con transiciones
+    # propias — se deriva directo de la decisión de este turno, que es
+    # suficiente para que el flujo sea observable sin el riesgo de una FSM
+    # completa a días de la demo en vivo.
+    flow_state: str = "indagando"
+    expected_next: str = "responder_pregunta_precision"
+
+
+def _derive_flow_state(decision: dict[str, object]) -> tuple[str, str]:
+    """(flow_state, expected_next) a partir de la decisión de este turno.
+
+    Fases: indagación (falta info o es ambiguo) -> clasificación (rojo/amarillo/
+    verde) -> cierre. No hay una fase "cierre" propia aquí porque el cierre real
+    lo produce build_closing_message() cuando la llamada termina, no un turno
+    intermedio — un "verde" en el turno 2 de una llamada de 6 turnos no debería
+    anunciar el cierre todavía si el paciente sigue hablando.
+    """
+    if decision.get("requires_clarification"):
+        return "indagando", "responder_pregunta_precision"
+    label = decision.get("label")
+    if label == "rojo":
+        return "escalando", "esperar_contacto_clinico"
+    if label == "amarillo":
+        return "seguimiento_amarillo", "confirmar_seguimiento_o_cerrar"
+    return "cierre_verde", "cerrar_llamada_o_nuevo_sintoma"
 
 
 class CallOrchestrator:
@@ -91,6 +121,7 @@ class CallOrchestrator:
             patient_context=patient_context,
         )
         assistant_text, llm_model, used_remote_model, input_tokens, output_tokens, total_tokens = composed
+        flow_state, expected_next = _derive_flow_state(decision)
 
         return asdict(
             CallTurnResult(
@@ -104,7 +135,51 @@ class CallOrchestrator:
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 total_tokens=total_tokens,
+                flow_state=flow_state,
+                expected_next=expected_next,
             )
+        )
+
+    def build_closing_message(
+        self,
+        final_decision: dict[str, object] | None,
+        patient_context: dict[str, object] | None = None,
+    ) -> str:
+        """Mensaje de cierre con próximos pasos concretos, no solo la pregunta de
+        seguimiento del último turno. Antes cerrar la llamada era una operación
+        de bookkeeping pura (marcar la sesión como "closed"): el agente nunca
+        decía nada al terminar, así que "cómo cierra la conversación" (criterio
+        de comprensión del problema y diseño) no tenía ninguna evidencia
+        observable más allá de que el botón dejara de estar activo.
+        """
+        label = (final_decision or {}).get("label")
+        first_name = None
+        if patient_context and patient_context.get("nombre_completo"):
+            first_name = str(patient_context["nombre_completo"]).split(" ")[0]
+        name_prefix = f"{first_name}, " if first_name else ""
+
+        if label == "rojo":
+            return (
+                f"{name_prefix}ya registré tu caso como prioritario y se lo estoy enviando al equipo "
+                "clínico ahora mismo; alguien te va a contactar en los próximos minutos. Si algo empeora "
+                "antes de eso, busca atención de inmediato."
+            )
+        if label == "amarillo":
+            return (
+                f"{name_prefix}dejo tu caso en seguimiento cercano y el equipo de enfermería va a revisar "
+                "lo que me contaste. Si algo empeora antes de que te contactemos, no esperes: busca atención."
+            )
+        if label == "verde":
+            return (
+                f"{name_prefix}no veo señales de alarma en lo que me contaste. Seguimos con las "
+                "indicaciones normales de recuperación y hacemos un nuevo seguimiento en 24 horas. "
+                "Si algo cambia antes, aquí estamos."
+            )
+        # Llamada cerrada sin ningún turno de síntomas registrado (p.ej. se
+        # cerró justo después del saludo) — no hay decisión de la que partir.
+        return (
+            f"{name_prefix}vamos a dejarlo hasta aquí por ahora. Cualquier cosa que sientas, "
+            "no dudes en contactarnos."
         )
 
     def _compose_response(

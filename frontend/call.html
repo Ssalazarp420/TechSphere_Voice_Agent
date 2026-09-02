@@ -474,6 +474,10 @@
         const response = await fetch(`/call/session/${sessionId}/close`, { method: 'POST' });
         const session = await response.json();
         renderSession(session);
+        if (session.closing_message) {
+          addBubble('assistant', session.closing_message, 'Cierre de llamada');
+          speak(session.closing_message);
+        }
         callStatus.textContent = 'Llamada cerrada.';
       }
 
