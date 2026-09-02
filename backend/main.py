@@ -1,4 +1,5 @@
 from functools import lru_cache
+import logging
 from pathlib import Path
 from time import perf_counter
 
@@ -10,6 +11,8 @@ import os
 import sys
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="TechSphere Voice Agent")
 
@@ -24,6 +27,7 @@ from backend.decision.rules import classify_report
 from backend.agent.orchestrator import CallOrchestrator
 from backend.admin.service import AdminDocumentService
 from backend.call.service import CallSessionService
+from backend.patients.lookup import PatientLookupService
 from backend.rag.store import CorpusVectorStore
 from backend.stt.service import GroqWhisperTranscriber
 
@@ -60,6 +64,11 @@ def get_call_session_service() -> CallSessionService:
 
 
 @lru_cache(maxsize=1)
+def get_patient_lookup_service() -> PatientLookupService:
+    return PatientLookupService(root_dir=ROOT_DIR)
+
+
+@lru_cache(maxsize=1)
 def get_transcriber() -> GroqWhisperTranscriber:
     return GroqWhisperTranscriber()
 
@@ -82,6 +91,7 @@ class CallStartResponse(BaseModel):
     assistant_text: str
     expected_next: str
     escalation_required: bool
+    patient_context_found: bool = False
 
 
 class CallTurnWithSessionRequest(BaseModel):
@@ -133,9 +143,28 @@ def decision_preview(payload: DecisionRequest):
 
 
 @app.get("/call/start", response_model=CallStartResponse)
-def call_start():
+def call_start(paciente_id: str | None = None):
     service = get_call_session_service()
-    return service.start_call()
+    patient_context = None
+    if paciente_id:
+        lookup = get_patient_lookup_service()
+        patient_context = lookup.get_patient_context(paciente_id)
+        if patient_context is None:
+            # No es un 404: un paciente_id no encontrado no debe tumbar la
+            # llamada, solo degradar a saludo genérico. El campo
+            # "patient_context_found" en la respuesta deja explícito que se
+            # pidió identidad y no se encontró, para que no pase inadvertido
+            # en la demo.
+            logger.warning("paciente_id '%s' no encontrado, iniciando llamada sin contexto de paciente", paciente_id)
+    result = service.start_call(patient_context=patient_context)
+    result["patient_context_found"] = patient_context is not None
+    return result
+
+
+@app.get("/patients/sample")
+def patients_sample(limit: int = 5):
+    lookup = get_patient_lookup_service()
+    return {"patients": lookup.sample_patients(limit=limit)}
 
 
 @app.post("/call/turn")

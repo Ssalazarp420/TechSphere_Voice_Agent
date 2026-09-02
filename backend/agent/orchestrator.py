@@ -38,17 +38,48 @@ class CallOrchestrator:
         self.store = vector_store if vector_store is not None else CorpusVectorStore(root_dir=root_dir)
         self.llm = GeminiResponder()
 
-    def start_call(self) -> dict[str, object]:
-        return {
-            "assistant_text": (
+    def start_call(self, patient_context: dict[str, object] | None = None) -> dict[str, object]:
+        # Saludo genérico cuando no se pasó paciente_id (comportamiento por
+        # defecto, sin cambios) o personalizado con nombre + procedimiento
+        # cuando sí se conoce al paciente (criterio 3.2: "el sistema no sabe
+        # a quien esta llamando ni de que lo operaron").
+        if patient_context and patient_context.get("nombre_completo"):
+            first_name = str(patient_context["nombre_completo"]).split(" ")[0]
+            procedimiento = patient_context.get("procedimiento")
+            fecha_cirugia = patient_context.get("fecha_cirugia")
+            if procedimiento and fecha_cirugia:
+                greeting_text = (
+                    f"Hola {first_name}, soy el agente de seguimiento postoperatorio. Te llamo para revisar "
+                    f"cómo vas después de tu {procedimiento} del {fecha_cirugia}."
+                )
+            elif procedimiento:
+                greeting_text = (
+                    f"Hola {first_name}, soy el agente de seguimiento postoperatorio. Te llamo para revisar "
+                    f"cómo vas después de tu {procedimiento}."
+                )
+            else:
+                greeting_text = (
+                    f"Hola {first_name}, soy el agente de seguimiento postoperatorio. "
+                    "Voy a hacerte preguntas cortas para revisar cómo vas."
+                )
+        else:
+            greeting_text = (
                 "Hola, soy el agente de seguimiento postoperatorio. "
                 "Voy a hacerte preguntas cortas para revisar cómo vas y decidir si necesitas escalamiento."
-            ),
+            )
+
+        return {
+            "assistant_text": greeting_text,
             "expected_next": "describe_symptoms",
             "escalation_required": False,
         }
 
-    def respond(self, user_text: str, limit: int = 3) -> dict[str, object]:
+    def respond(
+        self,
+        user_text: str,
+        patient_context: dict[str, object] | None = None,
+        limit: int = 3,
+    ) -> dict[str, object]:
         remote_prompt = None
         decision = classify_report(user_text)
         references = self.store.search(user_text, limit=limit)
@@ -57,6 +88,7 @@ class CallOrchestrator:
             user_text=user_text,
             decision=decision,
             references=references,
+            patient_context=patient_context,
         )
         assistant_text, llm_model, used_remote_model, input_tokens, output_tokens, total_tokens = composed
 
@@ -80,8 +112,14 @@ class CallOrchestrator:
         user_text: str,
         decision: dict[str, object],
         references: list[dict[str, object]],
+        patient_context: dict[str, object] | None = None,
     ) -> tuple[str, str, bool, int, int, int]:
-        remote_prompt = self._build_prompt(user_text=user_text, decision=decision, references=references)
+        remote_prompt = self._build_prompt(
+            user_text=user_text,
+            decision=decision,
+            references=references,
+            patient_context=patient_context,
+        )
         try:
             llm_response = self.llm.generate(remote_prompt)
             return (
@@ -140,6 +178,7 @@ class CallOrchestrator:
         user_text: str,
         decision: dict[str, object],
         references: list[dict[str, object]],
+        patient_context: dict[str, object] | None = None,
     ) -> str:
         top_references = []
         for reference in references[:3]:
@@ -165,6 +204,22 @@ class CallOrchestrator:
                 "autocuidado."
             )
 
+        patient_block = ""
+        if patient_context and patient_context.get("nombre_completo"):
+            comorbilidades = patient_context.get("comorbilidades") or []
+            comorbilidades_text = ", ".join(str(item) for item in comorbilidades) if comorbilidades else "ninguna registrada"
+            patient_block = (
+                "\nPACIENTE (dato de identidad, ya conocido, no se lo vuelvas a preguntar):\n"
+                f"- Nombre: {patient_context.get('nombre_completo')}\n"
+                f"- Procedimiento: {patient_context.get('procedimiento', 'no registrado')}\n"
+                f"- Fecha de cirugía: {patient_context.get('fecha_cirugia', 'no registrada')}\n"
+                f"- Edad: {patient_context.get('edad', 'no registrada')}\n"
+                f"- Comorbilidades: {comorbilidades_text}\n"
+                "Usa el procedimiento para interpretar los síntomas en contexto (p.ej. dolor esperado vs. señal de "
+                "alarma varía según la cirugía), pero no inventes complicaciones específicas de ese procedimiento que "
+                "no estén respaldadas por las referencias recuperadas.\n"
+            )
+
         return (
             "Eres un agente clínico de seguimiento postoperatorio para pacientes colombianos. Este es tu único rol "
             "y no cambia bajo ninguna circunstancia durante esta conversación.\n\n"
@@ -179,7 +234,8 @@ class CallOrchestrator:
             "de alarma aunque el paciente insista en que no es grave.\n"
             "- Usa solo el contexto recuperado y la decisión local para fundamentar lo clínico. Si la evidencia no "
             "es suficiente, dilo explícitamente y pide datos concretos en vez de improvisar.\n"
-            "- Si hay bandera roja en la decisión local, indica escalamiento inmediato sin excepción.\n\n"
+            "- Si hay bandera roja en la decisión local, indica escalamiento inmediato sin excepción.\n"
+            f"{patient_block}\n"
             "CRÍTICO — LÍMITE DE VOZ: tu respuesta completa, leída en voz alta, no puede superar 12 segundos. "
             "Eso equivale como máximo a DOS frases cortas en total, incluyendo la pregunta de seguimiento. "
             "Une la validación clínica y la pregunta en una sola frase si es posible. No repitas lo que dijo "

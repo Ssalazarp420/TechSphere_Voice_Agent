@@ -181,6 +181,12 @@
         <aside class="card">
           <h3>Estado de llamada</h3>
           <div id="callStatus" class="status">Listo para iniciar.</div>
+          <div style="margin-top: 12px;">
+            <label for="patientSelect" class="small">Paciente (opcional, para demo)</label>
+            <select id="patientSelect" style="width: 100%; margin-top: 4px;">
+              <option value="">Sin identidad — saludo genérico</option>
+            </select>
+          </div>
           <div class="toolbar" style="margin-top: 12px;">
             <button class="primary" id="startCallBtn">Iniciar llamada</button>
             <button class="secondary" id="voiceToggleBtn">Activar voz</button>
@@ -236,6 +242,7 @@
       const sendBtn = document.getElementById('sendBtn');
       const micBtn = document.getElementById('micBtn');
       const startCallBtn = document.getElementById('startCallBtn');
+      const patientSelect = document.getElementById('patientSelect');
       const voiceToggleBtn = document.getElementById('voiceToggleBtn');
       const stopVoiceBtn = document.getElementById('stopVoiceBtn');
       const closeCallBtn = document.getElementById('closeCallBtn');
@@ -343,13 +350,34 @@
         `;
       };
 
+      async function loadSamplePatients() {
+        try {
+          const response = await fetch('/patients/sample?limit=5');
+          if (!response.ok) return;
+          const data = await response.json();
+          for (const patient of data.patients || []) {
+            const option = document.createElement('option');
+            option.value = patient.paciente_id;
+            option.textContent = `${patient.nombre_completo} — ${patient.procedimiento}`;
+            patientSelect.appendChild(option);
+          }
+        } catch (error) {
+          // No bloquea la demo si falla: el selector simplemente se queda solo
+          // con la opción "sin identidad", que es el comportamiento por defecto.
+          console.warn('No se pudieron cargar pacientes de ejemplo:', error);
+        }
+      }
+      loadSamplePatients();
+
       async function startCall() {
         startCallBtn.disabled = true;
         startCallBtn.textContent = 'Iniciando llamada…';
         callStatus.textContent = 'Conectando con el agente, un momento...';
 
         try {
-          const response = await fetch('/call/start');
+          const pacienteId = patientSelect.value;
+          const url = pacienteId ? `/call/start?paciente_id=${encodeURIComponent(pacienteId)}` : '/call/start';
+          const response = await fetch(url);
           if (!response.ok) {
             callStatus.textContent = `No se pudo iniciar la llamada (${response.status}). Intenta de nuevo.`;
             return;
@@ -366,7 +394,10 @@
           });
           addBubble('assistant', data.assistant_text, 'Inicio de llamada');
           speak(data.assistant_text);
-          callStatus.textContent = `Llamada iniciada. Sesión ${sessionId}`;
+          const identityNote = pacienteId
+            ? (data.patient_context_found ? ' · identidad de paciente cargada' : ' · paciente_id no encontrado, saludo genérico')
+            : '';
+          callStatus.textContent = `Llamada iniciada. Sesión ${sessionId}${identityNote}`;
         } catch (error) {
           callStatus.textContent = `Error de red al iniciar la llamada: ${error.message}`;
         } finally {

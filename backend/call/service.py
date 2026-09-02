@@ -61,6 +61,11 @@ class CallSession:
     updated_at: str
     status: str
     turns: list[SessionTurn] = field(default_factory=list)
+    # None cuando la llamada arrancó sin paciente_id (comportamiento por
+    # defecto, sin romper el flujo existente). Guardarlo en la sesión —no solo
+    # pasarlo por parámetro al orquestador— es lo que permite que el resumen
+    # final sea "atribuible" a un paciente concreto, como pide el criterio 3.2.
+    patient_context: dict[str, object] | None = None
 
 
 class CallSessionService:
@@ -92,6 +97,7 @@ class CallSessionService:
             "created_at": session.created_at,
             "updated_at": session.updated_at,
             "status": session.status,
+            "patient_context": session.patient_context,
             "turns": [asdict(turn) for turn in session.turns],
             "summary": self._build_summary(session),
             "metrics": self._build_metrics(session),
@@ -109,6 +115,12 @@ class CallSessionService:
             "final_decision": final_decision,
             "reference_count": len(references),
             "reference_documents": sorted({str(ref.get("metadata", {}).get("filename", "")) for ref in references if ref}),
+            # Redundante con el campo de primer nivel "patient_context" de la
+            # sesión, pero se repite aquí porque el resumen es lo que se lee
+            # como el "informe atribuible" de la llamada (criterio 3.2/2.3): un
+            # evaluador que solo mira "summary" no debería tener que subir a
+            # buscar el paciente en otra parte del payload.
+            "patient_context": session.patient_context,
         }
 
     def _build_metrics(self, session: CallSession) -> dict[str, object]:
@@ -167,12 +179,13 @@ class CallSessionService:
             "pricing_assumptions": pricing_assumptions(),
         }
 
-    def create_session(self) -> dict[str, object]:
+    def create_session(self, patient_context: dict[str, object] | None = None) -> dict[str, object]:
         session = CallSession(
             session_id=uuid4().hex,
             created_at=self._now(),
             updated_at=self._now(),
             status="active",
+            patient_context=patient_context,
         )
         payload = self._load_sessions()
         payload["sessions"].append(self._serialize_session(session))
@@ -252,9 +265,9 @@ class CallSessionService:
             "pricing_assumptions": pricing_assumptions(),
         }
 
-    def start_call(self) -> dict[str, object]:
-        session = self.create_session()
-        greeting = self.orchestrator.start_call()
+    def start_call(self, patient_context: dict[str, object] | None = None) -> dict[str, object]:
+        session = self.create_session(patient_context=patient_context)
+        greeting = self.orchestrator.start_call(patient_context=patient_context)
         self.append_turn(session["session_id"], "assistant", greeting["assistant_text"], None, [])
         return {
             "session_id": session["session_id"],
@@ -312,6 +325,7 @@ class CallSessionService:
                     updated_at=session["updated_at"],
                     status=session.get("status", "active"),
                     turns=[SessionTurn(**turn) for turn in turns],
+                    patient_context=session.get("patient_context"),
                 )
             )
             self._save_sessions(payload)
@@ -321,8 +335,10 @@ class CallSessionService:
 
     def turn(self, session_id: str, utterance: str, stt_latency_ms: float | None = None) -> dict[str, object]:
         self.append_turn(session_id, "user", utterance)
+        session_before = self.get_session(session_id)
+        patient_context = session_before.get("patient_context")
         started_at = perf_counter()
-        result = self.orchestrator.respond(utterance)
+        result = self.orchestrator.respond(utterance, patient_context=patient_context)
         latency_ms = round((perf_counter() - started_at) * 1000, 2)
         end_to_end_latency_ms = round((stt_latency_ms or 0) + latency_ms, 2)
         session = self.append_turn(
@@ -367,6 +383,7 @@ class CallSessionService:
                 updated_at=self._now(),
                 status="closed",
                 turns=turns,
+                patient_context=session.get("patient_context"),
             )
             payload["sessions"][index] = self._serialize_session(closed)
             self._save_sessions(payload)

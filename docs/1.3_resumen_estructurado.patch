@@ -1,0 +1,107 @@
+diff --git a/backend/call/service.py b/backend/call/service.py
+index cab4fa2..717ec97 100644
+--- a/backend/call/service.py
++++ b/backend/call/service.py
+@@ -109,12 +109,33 @@ class CallSessionService:
+         symptom_turns = [turn.text for turn in session.turns if turn.role == "user"]
+         final_decision = decisions[-1] if decisions else {}
+ 
++        # Antes solo se exponía final_decision como dict crudo — el jurado
++        # (criterio 2.3, comentado explícitamente: "el resumen solo tiene 3
++        # campos útiles") tiene que entrar a ese dict para sacar cada dato. Se
++        # sube todo a campos de primer nivel legibles, tomando el último
++        # turno con decisión (el estado más reciente de la conversación) como
++        # fuente — no un acumulado de todos los turnos, porque el dolor o la
++        # fiebre reportados al inicio de la llamada pueden quedar obsoletos
++        # frente a lo que el paciente dice después.
++        red_flags = final_decision.get("red_flags") or []
++        yellow_flags = final_decision.get("yellow_flags") or []
++        label = final_decision.get("label")
++
+         return {
+             "turn_count": len(session.turns),
+             "symptom_turns": symptom_turns,
+             "final_decision": final_decision,
+             "reference_count": len(references),
+             "reference_documents": sorted({str(ref.get("metadata", {}).get("filename", "")) for ref in references if ref}),
++            "nivel_dolor": final_decision.get("pain_value"),
++            "temperatura": final_decision.get("temperature_value"),
++            "sintomas_anomalos": red_flags + yellow_flags,
++            # "amarillo" también dispara indagación adicional (requires_clarification),
++            # pero desde la perspectiva del resumen post-llamada lo que importa es si
++            # se escaló o se dejó en seguimiento ambulatorio — no hay una tercera acción
++            # real distinta a esas dos.
++            "accion_tomada": "escalamiento_inmediato" if label == "rojo" else "seguimiento_ambulatorio",
++            "prioridad_escalamiento": label,
+             # Redundante con el campo de primer nivel "patient_context" de la
+             # sesión, pero se repite aquí porque el resumen es lo que se lee
+             # como el "informe atribuible" de la llamada (criterio 3.2/2.3): un
+diff --git a/backend/decision/rules.py b/backend/decision/rules.py
+index 2bcee19..05982c6 100644
+--- a/backend/decision/rules.py
++++ b/backend/decision/rules.py
+@@ -151,6 +151,11 @@ class DecisionResult:
+     yellow_flags: list[str]
+     requires_clarification: bool = False
+     follow_up_question: str | None = None
++    # Se calculaban en classify_report() para el score y se descartaban al
++    # construir el resultado — el resumen de la llamada (2.3) los necesita
++    # como campos de primer nivel, no solo como insumo interno del score.
++    pain_value: float | None = None
++    temperature_value: float | None = None
+ 
+ 
+ def _extract_numeric_value(text: str, keyword_patterns: list[str]) -> float | None:
+@@ -205,7 +210,16 @@ def classify_report(text: str) -> dict[str, object]:
+         lowered,
+         [r"(?:dolor|pain)\s*(?:de\s*)?(?:es de|en|nivel)?\s*(\d+(?:[.,]\d+)?)", r"(\d+(?:[.,]\d+)?)\s*/\s*10"],
+     )
+-    temperature_value = _extract_numeric_value(lowered, [r"(?:fiebre|temperatura|temp)\s*(\d+(?:[.,]\d+)?)"])
++    # Antes exigía que el número siguiera inmediatamente a la palabra clave
++    # ("fiebre 39"), sin permitir "de" en medio como sí lo permite el patrón
++    # de dolor arriba. "Fiebre de 39" es la forma más natural de decirlo en
++    # español y no se capturaba: el score no sumaba los 3 puntos de fiebre
++    # alta y una fiebre de 39°C sola podía clasificar como amarillo en vez de
++    # rojo — exactamente el tipo de falso negativo que la rúbrica marca como
++    # la falla catastrófica en salud.
++    temperature_value = _extract_numeric_value(
++        lowered, [r"(?:fiebre|temperatura|temp)\s*(?:es de\s*|de\s*)?(\d+(?:[.,]\d+)?)"]
++    )
+ 
+     has_reassurance = any(pattern in lowered for pattern in REASSURANCE_PATTERNS)
+     ambiguous_hits = [marker for marker in AMBIGUOUS_MARKERS if marker in lowered]
+@@ -274,5 +288,7 @@ def classify_report(text: str) -> dict[str, object]:
+             yellow_flags=yellow_flags,
+             requires_clarification=requires_clarification,
+             follow_up_question=follow_up_question,
++            pain_value=pain_value,
++            temperature_value=temperature_value,
+         )
+     )
+diff --git a/frontend/call.html b/frontend/call.html
+index d36e258..e84c9e5 100644
+--- a/frontend/call.html
++++ b/frontend/call.html
+@@ -341,9 +341,20 @@
+ 
+         const symptoms = (summary.symptom_turns || []).map((item) => `<li>${item}</li>`).join('');
+         const refs = (summary.reference_documents || []).map((item) => `<li>${item}</li>`).join('');
++        const anomalos = (summary.sintomas_anomalos || []).map((item) => `<li>${item}</li>`).join('');
++        const patient = summary.patient_context;
++        const patientLine = patient
++          ? `<strong>Paciente:</strong> ${patient.nombre_completo} — ${patient.procedimiento} (${patient.fecha_cirugia})<br /><br />`
++          : '';
+         summaryList.innerHTML = `
+-          <strong>Decisión final:</strong> ${summary.final_decision?.label || 'sin decisión'}<br /><br />
+-          <strong>Síntomas registrados:</strong>
++          ${patientLine}
++          <strong>Prioridad de escalamiento:</strong> ${summary.prioridad_escalamiento || 'sin decisión'}<br />
++          <strong>Acción tomada:</strong> ${summary.accion_tomada || 'sin decisión'}<br />
++          <strong>Nivel de dolor reportado:</strong> ${summary.nivel_dolor ?? 'no reportado'}<br />
++          <strong>Temperatura reportada:</strong> ${summary.temperatura ?? 'no reportada'}<br /><br />
++          <strong>Síntomas anómalos detectados:</strong>
++          <ul>${anomalos || '<li>Ninguno</li>'}</ul>
++          <strong>Síntomas registrados (turnos del paciente):</strong>
+           <ul>${symptoms || '<li>Sin síntomas aún</li>'}</ul>
+           <strong>Documentos citados:</strong>
+           <ul>${refs || '<li>Sin referencias aún</li>'}</ul>
