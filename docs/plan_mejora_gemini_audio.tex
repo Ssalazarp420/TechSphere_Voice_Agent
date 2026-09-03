@@ -1,0 +1,74 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{a4paper, margin=1.2in}
+
+\title{Resumen de Asesoría: TechSphere Voice Agent}
+\author{Sebastián Salazar Pérez}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Problema Inicial}
+El agente de voz desarrollado para el Tech Sphere challenge presentaba una voz muy robótica. Se evaluaron diferentes motores TTS conversacionales (como ElevenLabs o Cartesia), y se decidió utilizar \textbf{Gemini Multimodal (Audio Nativo)} para unificar el servicio y reducir la latencia.
+
+\section{Solución Propuesta: Gemini Audio Nativo}
+Se implementó la modalidad de audio nativo de Gemini (Audio-Out) a través de Google AI Studio. 
+
+\subsection{Implementación en FastAPI (HTTP REST)}
+Para integrar el audio nativo usando peticiones tradicionales, se configura el parámetro \texttt{response\_modalities=["AUDIO"]} en el cliente de GenAI.
+
+\begin{lstlisting}[language=Python, backgroundcolor=\color{lightgray!20}, basicstyle=\ttfamily\footnotesize, breaklines=true, frame=single]
+from google import genai
+from google.genai import types
+from fastapi import Response
+
+client = genai.Client(api_key="TU_API_KEY_FREE_TIER")
+
+def generar_respuesta_voz(contexto_rag: str, duda_paciente: str):
+    prompt = f"Contexto Médico: {contexto_rag}\nPaciente: {duda_paciente}"
+    
+    response = client.models.generate_content(
+        model='gemini-3.5-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_modalities=["AUDIO"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name="Aoede"
+                    )
+                )
+            )
+        )
+    )
+    
+    audio_bytes = None
+    for part in response.candidates[0].content.parts:
+        if part.inline_data:
+            audio_bytes = part.inline_data.data
+            
+    return audio_bytes
+\end{lstlisting}
+
+\section{Análisis de Cuotas y Límites (Free Tier)}
+Al analizar el consumo de la capa gratuita (Free Tier) al habilitar la modalidad de voz, se determinó:
+\begin{itemize}
+    \item \textbf{Gemini 3.5 Flash:} Límite estricto de 20 peticiones por día (RPD). Se agota rápidamente en pruebas prolongadas.
+    \item \textbf{Gemini 3.5 Flash Lite:} Límite más holgado de 500 RPD, pero menos robusto para la multimodalidad de audio directo.
+    \item \textbf{Gemini 2.5 Flash Native Audio Dialog:} Permite llamadas ilimitadas al día y 1M TPM, diseñado explícitamente para WebSockets y streaming en vivo.
+\end{itemize}
+
+\section{Estrategia para el Demo}
+Dado que el tiempo para la presentación ante el jurado es corto:
+\begin{enumerate}
+    \item \textbf{Si se mantiene HTTP (FastAPI):} Usar \texttt{gemini-3.5-flash} (o \texttt{gemini-2.5-flash}) pidiendo audio a través de \texttt{response\_modalities}, pero asegurándose de tener a la mano múltiples API Keys nuevas en un archivo \texttt{.env} para alternarlas rápidamente si se agota la cuota de 20 peticiones diarias durante la demostración en vivo.
+    \item \textbf{Si se tienen WebSockets:} Migrar a la Live API de \texttt{Gemini 2.5 Flash Native Audio Dialog} usando el SDK asíncrono para lograr respuestas de latencia ultrabaja e ignorar las restricciones diarias de RPD de la versión 3.5 estándar.
+\end{enumerate}
+
+\end{document}
