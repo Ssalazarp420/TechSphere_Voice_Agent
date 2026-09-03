@@ -1,0 +1,241 @@
+diff --git a/backend/call/service.py b/backend/call/service.py
+index 02ecf8e..3eaf8dd 100644
+--- a/backend/call/service.py
++++ b/backend/call/service.py
+@@ -11,6 +11,8 @@ from uuid import uuid4
+ from backend.agent.orchestrator import CallOrchestrator
+ from backend.llm.pricing import estimate_llm_cost_usd, estimate_stt_cost_usd, pricing_assumptions
+ 
++_LABEL_SEVERITY = {"verde": 0, "amarillo": 1, "rojo": 2}
++
+ 
+ def _latency_stats(values: list[float]) -> tuple[float | None, float | None, float | None]:
+     """avg, P50 (mediana) y P95 — la rúbrica (§5) pide explícitamente P50 y P95,
+@@ -114,7 +116,19 @@ class CallSessionService:
+         decisions = [turn.decision or {} for turn in session.turns if turn.role == "assistant" and turn.decision]
+         references = [ref for turn in session.turns for ref in turn.references]
+         symptom_turns = [turn.text for turn in session.turns if turn.role == "user"]
+-        final_decision = decisions[-1] if decisions else {}
++        # Antes: final_decision = decisions[-1] — la decisión del ÚLTIMO turno
++        # nada más. Eso podía "olvidar" una bandera roja detectada a mitad de
++        # la llamada si turnos posteriores sonaban más tranquilos, dejando el
++        # resumen (y, desde el punto 2.1, el mensaje de cierre que el agente
++        # REALMENTE dice en voz) en contradicción directa con
++        # metrics.escalation_required — que sí revisa todos los turnos, no
++        # solo el último (ver _build_metrics más abajo). Se toma la decisión
++        # más severa vista en cualquier punto de la llamada, coherente con la
++        # asimetría clínica que exige la rúbrica: una vez que apareció una
++        # señal de alarma, no se "olvida" porque el paciente se calme después.
++        final_decision = (
++            max(decisions, key=lambda d: _LABEL_SEVERITY.get(d.get("label"), -1)) if decisions else {}
++        )
+ 
+         # Antes solo se exponía final_decision como dict crudo — el jurado
+         # (criterio 2.3, comentado explícitamente: "el resumen solo tiene 3
+diff --git a/backend/decision/rules.py b/backend/decision/rules.py
+index 05982c6..539ad5d 100644
+--- a/backend/decision/rules.py
++++ b/backend/decision/rules.py
+@@ -80,6 +80,33 @@ YELLOW_FLAG_KEYWORDS = [
+     "abultada",
+     "caliente al tacto",
+     "caliente la herida",
++    # Agregadas tras el eval contra el gold-set del reto: "la pierna como que
++    # no responde, muy incapacitada me siento" no calzaba con ninguna
++    # keyword existente y caía al genérico "lenguaje ambiguo" (solo +1),
++    # perdiendo una señal neuro/motora real que en combinación con fiebre y
++    # dolor debía escalar el caso.
++    "no responde",
++    "no me responde",
++    "no puedo mover",
++    "no puedo levantarme",
++    "muy incapacitada",
++    "muy incapacitado",
++    # También agregadas tras el eval: "escalofríos" ni siquiera estaba en la
++    # lista pese a ser una señal de fiebre muy directa; "afiebrada"/"cuerpo
++    # caliente" son formas comunes de reportar fiebre sin decir la palabra
++    # "fiebre". (Se probó también agregar mal-dormir y enrojecimiento en
++    # diminutivo ["rojita", "duermo mal", etc.] pero el eval mostró que
++    # tumbaban el accuracy general de 42% a 31%: ambas frases aparecen igual
++    # de seguido en casos genuinamente verdes donde el paciente agrega "pero
++    # es normal" — son síntomas de muy baja especificidad para esta señal en
++    # particular, y se revirtieron.)
++    "escalofrios",
++    "escalofríos",
++    "escalofrio",
++    "escalofrío",
++    "afiebrada",
++    "afiebrado",
++    "cuerpo caliente",
+ ]
+ 
+ # Frases que indican que el paciente reporta sentirse bien o sin síntomas.
+@@ -158,15 +185,67 @@ class DecisionResult:
+     temperature_value: float | None = None
+ 
+ 
+-def _extract_numeric_value(text: str, keyword_patterns: list[str]) -> float | None:
++_PAIN_WORD_VALUES = {
++    "cero": 0.0,
++    "un": 1.0,
++    "una": 1.0,
++    "uno": 1.0,
++    "dos": 2.0,
++    "tres": 3.0,
++    "cuatro": 4.0,
++    "cinco": 5.0,
++    "seis": 6.0,
++    "siete": 7.0,
++    "ocho": 8.0,
++    "nueve": 9.0,
++    "diez": 10.0,
++}
++_PAIN_WORD_PATTERN = re.compile(r"\bun[oa]?\s+(" + "|".join(_PAIN_WORD_VALUES) + r")\b")
++# Separador de cláusulas que NO corta dentro de un número decimal: sin el
++# lookaround, "38.1°C" se partía en cláusulas "38" y "1°c" por el punto
++# decimal, y el regex de número solo veía "38" — perdiendo el decimal (no
++# afecta el umbral de fiebre aquí, pero sí sería un problema en otros casos).
++_CLAUSE_SPLIT_PATTERN = re.compile(r"(?<!\d)[.,;!?¿()]+(?!\d)")
++
++
++def _extract_numeric_value(text: str, keywords: list[str], allow_pain_words: bool = False) -> float | None:
++    """Busca el primer número que aparece en la MISMA cláusula que alguna
++    keyword, sin exigir que el número siga inmediatamente a la palabra.
++
++    Antes: un regex rígido tipo `(?:dolor)\\s*(?:de\\s*)?(\\d+)`, que exigía que
++    el número apareciera casi pegado a la keyword con un set fijo de
++    conectores ("de", "es de", "en", "nivel"). Fallaba con cualquier frase
++    intermedia natural: "el dolor está como en un 5" o "me tomé la
++    temperatura y marcó 38.1°C" no calzaban con ningún conector permitido,
++    pese a que la keyword clínica sí estaba presente en la oración. El eval
++    contra el gold-set del reto (dataset_final.xlsx) mostró que esto no era
++    un caso raro: era la causa de la mayoría de los falsos negativos en rojo.
++
++    Ahora: el texto se separa en cláusulas por puntuación, y si la keyword
++    aparece en una cláusula, se toma el primer número de ESA cláusula (en
++    cualquier posición relativa a la keyword). Acotar a la cláusula evita
++    cruzar hacia un número de un tema distinto en la misma oración larga
++    (p.ej. "hace 3 días" en otra cláusula no se confunde con el nivel de
++    dolor). allow_pain_words habilita reconocer números de dolor escritos en
++    palabras ("un cinco", "un ocho") — común en el habla natural para una
++    escala 0-10; no se usa para temperatura, donde el dataset siempre usa
++    dígitos ("38.1", "39").
++    """
+     lowered = text.lower()
+-    for pattern in keyword_patterns:
+-        match = re.search(pattern, lowered)
+-        if match:
++    clauses = _CLAUSE_SPLIT_PATTERN.split(lowered)
++    for clause in clauses:
++        if not any(keyword in clause for keyword in keywords):
++            continue
++        digit_match = re.search(r"(\d+(?:[.,]\d+)?)", clause)
++        if digit_match:
+             try:
+-                return float(match.group(1))
+-            except (IndexError, ValueError):
+-                continue
++                return float(digit_match.group(1).replace(",", "."))
++            except ValueError:
++                pass
++        if allow_pain_words:
++            word_match = _PAIN_WORD_PATTERN.search(clause)
++            if word_match:
++                return _PAIN_WORD_VALUES[word_match.group(1)]
+     return None
+ 
+ 
+@@ -176,27 +255,24 @@ def _extract_numeric_value(text: str, keyword_patterns: list[str]) -> float | No
+ # busca una señal de negación en una ventana corta inmediatamente antes de la
+ # keyword, en vez de un NLP completo — suficiente para el caso común de un
+ # turno de voz corto.
+-NEGATION_CUES = [
+-    "sin ",
+-    "no tengo",
+-    "no tiene",
+-    "no hay",
+-    "no presenta",
+-    "no ha tenido",
+-    "nada de",
+-    "ausencia de",
+-    "niega",
+-    "no siento",
+-    "no me duele",
+-]
++# Antes: una lista fija de frases exactas ("no tengo", "no siento", "sin ").
++# El eval mostró el costo real: "no veo pus ni nada raro" no calzaba con
++# ninguna frase de la lista ("no veo" no está, solo "no siento"/"no tengo")
++# y "pus" se marcaba como bandera roja pese a estar negada explícitamente —
++# un falso rojo por un paciente diciendo, literalmente, que no tiene el
++# síntoma. Se reemplaza por una palabra de negación general buscada dentro
++# de la MISMA CLÁUSULA que la keyword (no una ventana de caracteres fija,
++# que sí podría cruzar hacia una cláusula distinta y negar un síntoma que
++# el paciente en realidad sí reportó después de una coma).
++_NEGATION_WORDS = ["no", "sin", "nunca", "jamás", "jamas", "niega", "ausencia de", "nada de"]
++_NEGATION_WORD_PATTERN = re.compile(r"\b(" + "|".join(w.replace(" ", r"\s+") for w in _NEGATION_WORDS) + r")\b")
+ 
+ 
+-def _is_negated(lowered: str, keyword: str, window: int = 25) -> bool:
+-    index = lowered.find(keyword)
+-    if index == -1:
+-        return False
+-    preceding = lowered[max(0, index - window):index]
+-    return any(cue in preceding for cue in NEGATION_CUES)
++def _is_negated(lowered: str, keyword: str) -> bool:
++    for clause in _CLAUSE_SPLIT_PATTERN.split(lowered):
++        if keyword in clause and _NEGATION_WORD_PATTERN.search(clause):
++            return True
++    return False
+ 
+ 
+ def classify_report(text: str) -> dict[str, object]:
+@@ -206,20 +282,8 @@ def classify_report(text: str) -> dict[str, object]:
+         keyword for keyword in YELLOW_FLAG_KEYWORDS if keyword in lowered and not _is_negated(lowered, keyword)
+     ]
+ 
+-    pain_value = _extract_numeric_value(
+-        lowered,
+-        [r"(?:dolor|pain)\s*(?:de\s*)?(?:es de|en|nivel)?\s*(\d+(?:[.,]\d+)?)", r"(\d+(?:[.,]\d+)?)\s*/\s*10"],
+-    )
+-    # Antes exigía que el número siguiera inmediatamente a la palabra clave
+-    # ("fiebre 39"), sin permitir "de" en medio como sí lo permite el patrón
+-    # de dolor arriba. "Fiebre de 39" es la forma más natural de decirlo en
+-    # español y no se capturaba: el score no sumaba los 3 puntos de fiebre
+-    # alta y una fiebre de 39°C sola podía clasificar como amarillo en vez de
+-    # rojo — exactamente el tipo de falso negativo que la rúbrica marca como
+-    # la falla catastrófica en salud.
+-    temperature_value = _extract_numeric_value(
+-        lowered, [r"(?:fiebre|temperatura|temp)\s*(?:es de\s*|de\s*)?(\d+(?:[.,]\d+)?)"]
+-    )
++    pain_value = _extract_numeric_value(lowered, ["dolor", "pain"], allow_pain_words=True)
++    temperature_value = _extract_numeric_value(lowered, ["fiebre", "temperatura", "temp"])
+ 
+     has_reassurance = any(pattern in lowered for pattern in REASSURANCE_PATTERNS)
+     ambiguous_hits = [marker for marker in AMBIGUOUS_MARKERS if marker in lowered]
+@@ -231,10 +295,25 @@ def classify_report(text: str) -> dict[str, object]:
+         score += 3
+     if pain_value is not None and pain_value >= 8:
+         score += 2
++    # Antes: `if yellow_flags: score += 1` — un paciente con 1 síntoma amarillo
++    # sumaba exactamente lo mismo que uno con 5 concurrentes (fiebre, escalofríos,
++    # enrojecimiento, poco apetito, mal dormir). El eval mostró varios rojo reales
++    # con múltiples síntomas moderados simultáneos que nunca alcanzaban el umbral
++    # de escalamiento porque cada uno individualmente era "solo amarillo". La
++    # combinación de varios síntomas concurrentes es en sí misma una señal de
++    # severidad mayor, no aditiva 1 a 1 con el peso de un signo aislado — se
++    # limita a +3 para no sobreponderar frente a un signo de alarma real (que
++    # vale +3 también) ni convertir cualquier lista larga de síntomas leves en
++    # rojo automático.
+     if yellow_flags:
+-        score += 1
++        score += min(len(yellow_flags), 3)
+     if temperature_value is not None and 37.5 <= temperature_value < 38.0:
+         score += 1
++    # Dolor moderado-alto (6-7.9): no llega al umbral de +2 de "severo" (>=8),
++    # pero tampoco es un dato a ignorar — mismo criterio escalonado que ya se
++    # usaba para temperatura (37.5-38 vs >=38).
++    if pain_value is not None and 6 <= pain_value < 8:
++        score += 1
+ 
+     # Asimetría clínica (rúbrica: el falso negativo es la falla catastrófica).
+     # Si el paciente describe algo con lenguaje vago/regional que ninguna

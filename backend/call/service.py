@@ -11,6 +11,8 @@ from uuid import uuid4
 from backend.agent.orchestrator import CallOrchestrator
 from backend.llm.pricing import estimate_llm_cost_usd, estimate_stt_cost_usd, pricing_assumptions
 
+_LABEL_SEVERITY = {"verde": 0, "amarillo": 1, "rojo": 2}
+
 
 def _latency_stats(values: list[float]) -> tuple[float | None, float | None, float | None]:
     """avg, P50 (mediana) y P95 — la rúbrica (§5) pide explícitamente P50 y P95,
@@ -114,7 +116,19 @@ class CallSessionService:
         decisions = [turn.decision or {} for turn in session.turns if turn.role == "assistant" and turn.decision]
         references = [ref for turn in session.turns for ref in turn.references]
         symptom_turns = [turn.text for turn in session.turns if turn.role == "user"]
-        final_decision = decisions[-1] if decisions else {}
+        # Antes: final_decision = decisions[-1] — la decisión del ÚLTIMO turno
+        # nada más. Eso podía "olvidar" una bandera roja detectada a mitad de
+        # la llamada si turnos posteriores sonaban más tranquilos, dejando el
+        # resumen (y, desde el punto 2.1, el mensaje de cierre que el agente
+        # REALMENTE dice en voz) en contradicción directa con
+        # metrics.escalation_required — que sí revisa todos los turnos, no
+        # solo el último (ver _build_metrics más abajo). Se toma la decisión
+        # más severa vista en cualquier punto de la llamada, coherente con la
+        # asimetría clínica que exige la rúbrica: una vez que apareció una
+        # señal de alarma, no se "olvida" porque el paciente se calme después.
+        final_decision = (
+            max(decisions, key=lambda d: _LABEL_SEVERITY.get(d.get("label"), -1)) if decisions else {}
+        )
 
         # Antes solo se exponía final_decision como dict crudo — el jurado
         # (criterio 2.3, comentado explícitamente: "el resumen solo tiene 3
