@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date, datetime
 from pathlib import Path
 
-import pandas as pd
+from openpyxl import load_workbook
 
 logger = logging.getLogger(__name__)
 
@@ -28,29 +29,49 @@ class PatientLookupService:
     def __init__(self, root_dir: Path) -> None:
         self.root_dir = root_dir
         self.dataset_dir = root_dir / "dataset"
-        self._demographics: pd.DataFrame | None = None
-        self._clinical: pd.DataFrame | None = None
+        self._demographics: list[dict[str, object]] | None = None
+        self._clinical: list[dict[str, object]] | None = None
+
+    @staticmethod
+    def _read_rows(path: Path) -> list[dict[str, object]]:
+        workbook = load_workbook(path, read_only=True, data_only=True)
+        try:
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(values_only=True)
+            headers = [str(header) for header in next(rows)]
+            return [dict(zip(headers, values)) for values in rows]
+        finally:
+            workbook.close()
 
     def _load(self) -> None:
         if self._demographics is not None and self._clinical is not None:
             return
-        self._demographics = pd.read_excel(self.dataset_dir / "perfiles_pacientes_co.xlsx")
-        self._clinical = pd.read_excel(self.dataset_dir / "perfiles_clinicos_pacientes_silver_contest.xlsx")
+        self._demographics = self._read_rows(self.dataset_dir / "perfiles_pacientes_co.xlsx")
+        self._clinical = self._read_rows(self.dataset_dir / "perfiles_clinicos_pacientes_silver_contest.xlsx")
 
     def sample_patients(self, limit: int = 5) -> list[dict[str, object]]:
         """Unos cuantos pacientes de ejemplo (id + nombre + procedimiento) para
         poblar el selector del frontend en la demo — no expone el dataset
         completo, solo lo mínimo necesario para elegir a quién "llamar"."""
         self._load()
-        merged = self._clinical.merge(self._demographics, on="paciente_id", how="inner")
-        sample = merged.head(limit)
+        demographics_by_id = {
+            str(row.get("paciente_id")): row for row in self._demographics or []
+        }
+        sample = []
+        for clinical in self._clinical or []:
+            demographic = demographics_by_id.get(str(clinical.get("paciente_id")))
+            if demographic is None:
+                continue
+            sample.append((clinical, demographic))
+            if len(sample) >= limit:
+                break
         return [
             {
-                "paciente_id": str(row["paciente_id"]),
-                "nombre_completo": str(row["nombre_completo"]),
-                "procedimiento": str(row["procedimiento"]),
+                "paciente_id": str(clinical["paciente_id"]),
+                "nombre_completo": str(demographic["nombre_completo"]),
+                "procedimiento": str(clinical["procedimiento"]),
             }
-            for _, row in sample.iterrows()
+            for clinical, demographic in sample
         ]
 
     def get_patient_context(self, paciente_id: str) -> dict[str, object] | None:
@@ -59,25 +80,31 @@ class PatientLookupService:
         de paciente (comportamiento aditivo: la llamada sigue funcionando sin
         identidad si no se encuentra)."""
         self._load()
-        demo_match = self._demographics[self._demographics["paciente_id"] == paciente_id]
-        clinical_match = self._clinical[self._clinical["paciente_id"] == paciente_id]
-        if demo_match.empty or clinical_match.empty:
+        demo = next(
+            (row for row in self._demographics or [] if str(row.get("paciente_id")) == paciente_id),
+            None,
+        )
+        clinical = next(
+            (row for row in self._clinical or [] if str(row.get("paciente_id")) == paciente_id),
+            None,
+        )
+        if demo is None or clinical is None:
             logger.warning("paciente_id '%s' no encontrado en ambos datasets, sigue sin contexto", paciente_id)
             return None
 
-        demo = demo_match.iloc[0]
-        clinical = clinical_match.iloc[0]
-
         try:
-            comorbilidades = json.loads(clinical.get("comorbilidades") or "[]")
+            comorbilidades = json.loads(str(clinical.get("comorbilidades") or "[]"))
         except (TypeError, ValueError):
             comorbilidades = []
 
         fecha_cirugia_raw = clinical.get("fecha_cirugia")
-        fecha_cirugia = str(fecha_cirugia_raw)[:10] if fecha_cirugia_raw is not None else ""
+        if isinstance(fecha_cirugia_raw, (datetime, date)):
+            fecha_cirugia = fecha_cirugia_raw.isoformat()[:10]
+        else:
+            fecha_cirugia = str(fecha_cirugia_raw)[:10] if fecha_cirugia_raw is not None else ""
 
         edad_raw = clinical.get("edad")
-        edad = int(edad_raw) if edad_raw is not None and not pd.isna(edad_raw) else None
+        edad = int(edad_raw) if edad_raw is not None else None
 
         return {
             "paciente_id": paciente_id,

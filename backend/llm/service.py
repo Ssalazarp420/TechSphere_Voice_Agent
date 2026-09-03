@@ -16,12 +16,9 @@ class LLMResponse:
 
 class GeminiResponder:
     def __init__(self, model_name: str | None = None) -> None:
-        # Gemini 1.5 (toda la familia) fue retirado por Google y devuelve 404 en
-        # cualquier llamada. Gemini 2.5 Flash tampoco está disponible para API keys
-        # nuevas ("no longer available to new users"), así que migramos directo a
-        # Gemini 3.5 Flash (generación vigente, GA, sin fecha de retiro anunciada).
-        # La rúbrica del reto (G3) exige una FAMILIA permitida (Gemini Flash), no un
-        # snapshot puntual — ver https://ai.google.dev/gemini-api/docs/deprecations.
+        # El modelo se puede cambiar desde el entorno para probar variantes Flash
+        # sin modificar el código. La rúbrica del reto (G3) exige una familia
+        # permitida (Gemini Flash), no un snapshot puntual.
         self.model_name = model_name or os.getenv("GEMINI_MODEL", os.getenv("MODEL_NAME", "gemini-3.5-flash"))
         self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
         self.available = bool(self.api_key)
