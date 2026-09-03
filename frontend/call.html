@@ -259,6 +259,8 @@
       let audioChunks = [];
       let isRecording = false;
       const synth = window.speechSynthesis;
+      let selectedVoice = null;
+      let currentAudio = null;
       let sessionId = localStorage.getItem('techsphereCallSessionId') || '';
 
       // Detección de silencio (VAD por energía) para detener la grabación sola
@@ -282,14 +284,54 @@
         conversation.scrollTop = conversation.scrollHeight;
       };
 
-      const speak = (text) => {
-        if (!voiceEnabled || !synth) return;
-        synth.cancel();
+      const chooseSpanishVoice = () => {
+        if (!synth) return;
+        const voices = synth.getVoices();
+        const spanishVoices = voices.filter((voice) => /^es(?:-|_)/i.test(voice.lang));
+        const preferredVoice = spanishVoices.find((voice) => /co|mx|419/i.test(voice.lang))
+          || spanishVoices.find((voice) => /google|microsoft|natural|neural|online/i.test(voice.name))
+          || spanishVoices[0];
+        selectedVoice = preferredVoice || null;
+      };
+
+      chooseSpanishVoice();
+      synth?.addEventListener?.('voiceschanged', chooseSpanishVoice);
+
+      const speakWithBrowser = (text) => {
+        if (!synth) return;
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'es-CO';
-        utterance.rate = 1.02;
-        utterance.pitch = 1;
+        utterance.voice = selectedVoice;
+        utterance.lang = selectedVoice?.lang || 'es-CO';
+        utterance.rate = 0.96;
+        utterance.pitch = 0.98;
         synth.speak(utterance);
+      };
+
+      const speak = async (text) => {
+        if (!voiceEnabled) return;
+        synth?.cancel?.();
+        currentAudio?.pause?.();
+        currentAudio = null;
+
+        try {
+          const response = await fetch('/tts/synthesize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+          });
+          if (!response.ok) throw new Error(`Piper respondió ${response.status}`);
+
+          const audioBlob = await response.blob();
+          currentAudio = new Audio(URL.createObjectURL(audioBlob));
+          currentAudio.onended = () => {
+            URL.revokeObjectURL(currentAudio.src);
+            currentAudio = null;
+          };
+          await currentAudio.play();
+        } catch (error) {
+          console.warn('Piper no disponible; se usa la voz del navegador.', error);
+          speakWithBrowser(text);
+        }
       };
 
       const renderDecision = (decision) => {
@@ -642,12 +684,14 @@
       closeCallBtn.addEventListener('click', closeCall);
       voiceToggleBtn.addEventListener('click', () => {
         voiceEnabled = !voiceEnabled;
-        voiceToggleBtn.textContent = voiceEnabled ? 'Activar voz' : 'Voz activa';
+        voiceToggleBtn.textContent = voiceEnabled ? 'Desactivar voz' : 'Activar voz';
         callStatus.textContent = voiceEnabled ? 'Voz activada.' : 'Voz desactivada.';
         if (!voiceEnabled) synth?.cancel?.();
       });
       stopVoiceBtn.addEventListener('click', () => {
         synth?.cancel?.();
+        currentAudio?.pause?.();
+        currentAudio = null;
         callStatus.textContent = 'Síntesis de voz detenida.';
       });
 

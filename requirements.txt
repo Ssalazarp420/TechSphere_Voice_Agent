@@ -3,6 +3,7 @@ uvicorn[standard]==0.32.0
 python-dotenv==1.0.1
 google-genai==2.17.0
 groq==1.6.0
+piper-tts==1.7.0
 chromadb==0.5.20
 sentence-transformers==3.3.1
 # Versiones exactas (no rangos) para el stack de embeddings: verificadas juntas

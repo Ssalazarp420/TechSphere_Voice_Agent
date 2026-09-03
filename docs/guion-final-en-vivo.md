@@ -15,18 +15,19 @@ agente no ha visto. Este guion se prepara para eso, no solo para un demo lineal.
 
 ## 1. Demo cronometrado (5:00)
 
-**Antes de empezar:** confirmar billing activo en Google AI Studio (riesgo operativo ya
-documentado: cuota gratuita de Gemini son 20 requests/día, se agota a media demo). Tener
-listo un documento de prueba que no esté en `dataset/textos/` para la prueba de
-conocimiento vivo (punto 4).
+**Antes de empezar:** iniciar el backend y hacer una síntesis corta de prueba para
+calentar Piper. La voz usada finalmente es `es_MX-claude-high`, ejecutada localmente y
+reproducida como WAV desde el endpoint TTS. Si Piper no está disponible, la interfaz cae
+automáticamente a la voz del navegador. También tener listo un documento de prueba que
+no esté en `dataset/textos/` para la prueba de conocimiento vivo (punto 4).
 
 | Tiempo | Qué hacer | Qué decir |
 |---|---|---|
 | 0:00–0:25 | Pantalla en `frontend/call.html` | Una frase: qué es el agente, a quién sirve, por qué voz y no chat (seguimiento postoperatorio real es por teléfono, no por app). |
-| 0:25–1:15 | Elegir un paciente del selector (identidad + procedimiento) → Iniciar llamada | El saludo sale personalizado y hablado — mencionar en una frase que el sistema conoce quién es el paciente y de qué cirugía, dato que **antes no existía en el flujo** (evitar detalle técnico aquí, solo el resultado). |
+| 0:25–1:15 | Elegir un paciente del selector (identidad + procedimiento) → Iniciar llamada | El saludo sale personalizado y hablado con Piper — mencionar en una frase que el sistema conoce quién es el paciente y de qué cirugía, dato que **antes no existía en el flujo** (evitar detalle técnico aquí, solo el resultado). |
 | 1:15–2:45 | Turno de síntomas por voz. **Usar una frase clara y directa, no fragmentada** (ver nota abajo) | Mientras responde: señalar que la respuesta cabe en ~12 segundos de voz — a propósito, porque una llamada real no puede sonar a lectura de manual. |
 | 2:45–3:30 | Mostrar el panel de resumen actualizado: nivel de dolor, temperatura, síntomas, prioridad de escalamiento | Una frase: esto es lo que un enfermero vería después, no solo la transcripción cruda. |
-| 3:30–4:15 | Cerrar la llamada → el agente dice el mensaje de cierre en voz, con próximos pasos concretos según la clasificación | Señalar que el cierre cambia según rojo/amarillo/verde — no es un "gracias, adiós" genérico. |
+| 3:30–4:15 | Cerrar la llamada → el agente dice el mensaje de cierre en voz mediante Piper, con próximos pasos concretos según la clasificación | Señalar que el cierre cambia según rojo/amarillo/verde — no es un "gracias, adiós" genérico. |
 | 4:15–5:00 | Cambiar a consola admin → subir el documento de prueba (fuera de cualquier corpus) → mencionar que al eliminarlo el agente lo olvida (no hace falta demostrar el ciclo completo si el tiempo aprieta, con mostrarlo una vez alcanza) | Cierre: una frase de por qué esto importa (conocimiento vivo, no estático). |
 
 **Nota sobre qué frase de síntomas usar en vivo:** el eval contra el gold-set oficial
@@ -160,3 +161,65 @@ y costo de STT. Antes del sábado: correr una llamada de prueba completa, anotar
 real que devuelve el endpoint, y llevarlo memorizado — no improvisado — para cuando
 pregunten por viabilidad comercial (Pregunta 1 del video ya cubre el argumento de negocio
 en general; en vivo puede pedirse el número concreto).
+
+---
+
+## 6. Voz elegida y explicación de la latencia
+
+### Alternativas consideradas
+
+Se consideraron tres caminos para mejorar la lectura del agente:
+
+- **Voz del navegador:** era la opción más rápida y no añadía dependencias, pero la
+  calidad dependía del sistema operativo, navegador y voces instaladas.
+- **Gemini Native Audio / Live API:** podía ofrecer una experiencia de audio más
+  conversacional, pero exigía cambiar el flujo a audio nativo y, para streaming real,
+  integrar WebSockets. Era demasiado riesgoso para esta etapa.
+- **Piper local:** permitía conservar el texto generado por Gemini y reemplazar solo la
+  capa de lectura, sin rehacer el orquestador, el RAG ni las sesiones.
+
+### Decisión final
+
+Se eligió **Piper con la voz `es_MX-claude-high`**. El backend expone `POST /tts/synthesize`
+y devuelve un WAV generado localmente. El frontend intenta usar Piper primero y conserva
+`speechSynthesis` como fallback para que una ausencia del modelo no bloquee la llamada.
+
+La decisión fue incremental: primero se mejoró la selección de voz del navegador y se
+limitaron las respuestas a una o dos frases; al no ser suficiente la naturalidad, se
+añadió Piper como adaptador independiente. Así se mejoró la voz sin modificar la lógica
+clínica existente.
+
+### Cómo explicar `96992.81 ms`
+
+El valor equivale a **96.99 segundos**, por lo que debe presentarse como un outlier y no
+como la latencia normal de Piper. La métrica `end_to_end_latency_ms` actual se calcula
+como:
+
+```text
+STT de Groq + RAG + generación de Gemini
+```
+
+No mide por separado el tiempo de reproducción de Piper en el navegador. Por tanto, no
+es correcto decir que Piper tardó 97 segundos.
+
+La explicación prudente para el jurado es:
+
+> "Detectamos una medición atípica de 96.99 segundos. Esa métrica incluye el turno
+> completo de audio, principalmente la red y la carga inicial de los servicios, no solo
+> la síntesis. Piper se ejecuta localmente y su primera síntesis carga el modelo; por eso
+> hacemos una síntesis de calentamiento antes de la demo. Para evaluar correctamente la
+> experiencia, separamos STT, RAG + Gemini, carga de Piper y tiempo hasta que comienza la
+> reproducción."
+
+No se debe afirmar una causa única sin conservar los logs de ese turno. Las causas
+posibles son una carga fría del modelo, una espera de red o cuota en STT/Gemini, o una
+medición hecha durante el arranque del entorno. La cifra debe investigarse por etapas,
+pero sí deja claro que el problema pendiente es de observabilidad y calentamiento del
+pipeline, no una razón para rehacer toda la aplicación.
+
+### Respuesta breve si preguntan por qué no se migró a Gemini Audio
+
+> "Gemini Audio es una alternativa válida para una futura conversación bidireccional en
+> streaming, pero para esta demo el cambio de REST a Live API habría aumentado el riesgo.
+> Piper nos permitió mejorar la lectura manteniendo intactos el razonamiento, el RAG y la
+> trazabilidad clínica."

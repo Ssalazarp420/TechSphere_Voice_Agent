@@ -4,7 +4,7 @@ from pathlib import Path
 from time import perf_counter
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import os
@@ -30,6 +30,7 @@ from backend.call.service import CallSessionService
 from backend.patients.lookup import PatientLookupService
 from backend.rag.store import CorpusVectorStore
 from backend.stt.service import GroqWhisperTranscriber
+from backend.tts.service import PiperSynthesizer
 
 
 # @lru_cache(maxsize=1) convierte cada get_*() en un singleton perezoso: la
@@ -73,6 +74,11 @@ def get_transcriber() -> GroqWhisperTranscriber:
     return GroqWhisperTranscriber()
 
 
+@lru_cache(maxsize=1)
+def get_synthesizer() -> PiperSynthesizer:
+    return PiperSynthesizer(root_dir=ROOT_DIR)
+
+
 class SearchRequest(BaseModel):
     query: str = Field(min_length=1, description="Texto a recuperar desde el corpus clínico")
     limit: int = Field(default=5, ge=1, le=20)
@@ -97,6 +103,10 @@ class CallStartResponse(BaseModel):
 class CallTurnWithSessionRequest(BaseModel):
     session_id: str = Field(min_length=1)
     utterance: str = Field(min_length=1, description="Turno del paciente transcrito o escrito")
+
+
+class SpeechRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
 
 
 def _files_response(payload: list[dict[str, object]]) -> dict[str, object]:
@@ -190,6 +200,28 @@ def stt_status():
         "model": transcriber.model_name,
         "language": transcriber.language,
     }
+
+
+@app.get("/tts/status")
+def tts_status():
+    synthesizer = get_synthesizer()
+    return {
+        "available": synthesizer.is_available(),
+        "model": synthesizer.model_path.name,
+        "language": "es-MX",
+    }
+
+
+@app.post("/tts/synthesize")
+def tts_synthesize(payload: SpeechRequest):
+    synthesizer = get_synthesizer()
+    if not synthesizer.is_available():
+        raise HTTPException(status_code=503, detail="Piper TTS no está configurado")
+    try:
+        audio_bytes = synthesizer.synthesize(payload.text)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return Response(content=audio_bytes, media_type="audio/wav")
 
 
 @app.post("/call/session/turn/audio")
