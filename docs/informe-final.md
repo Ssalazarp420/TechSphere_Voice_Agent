@@ -42,10 +42,18 @@ de prompt descritas en la §5 de este informe).
 ## 4. Modelo usado
 
 **Gemini 3.5 Flash**, dentro de la familia permitida por la rúbrica (Gemini, gama
-Flash). Se eligió porque:
+Flash), configurado por defecto como **`gemini-3.5-flash-lite`**. Se eligió la variante
+Lite porque:
 
 - Ofrece una ventana de contexto amplia para combinar historial de turno, decisión local
-  y referencias del RAG en una sola consulta sin fragmentar el razonamiento clínico.
+  y referencias del RAG en una sola consulta sin fragmentar el razonamiento clínico —
+  igual que `3.5 Flash` normal, comparten familia y capacidades base.
+- En pruebas manuales, el free tier de `3.5 Flash` agotaba su cuota tras 2-3
+  interacciones, un riesgo directo para una demo en vivo de varios turnos frente al
+  jurado; `3.5 Flash Lite` respondió correctamente con más margen de cuota disponible en
+  las mismas condiciones (ver `docs/bitacora-modelos-gemini.md`). El modelo se controla
+  por variable de entorno, así que se puede volver a `3.5 Flash` sin cambiar código si se
+  activa facturación en el proyecto de Google AI Studio antes de la presentación.
 - Ya está integrado con fallback local (plantilla determinística en
   `CallOrchestrator._compose_response`) para que el repositorio siga siendo ejecutable
   sin `GEMINI_API_KEY` — relevante para la compuerta G2 (levantable en 15 min).
@@ -60,8 +68,17 @@ estas migraciones afecta el cumplimiento de la compuerta. De paso se migró del 
 
 **STT**: Groq Whisper Large V3 (`whisper-large-v3`, español), corriendo en el backend en
 vez del Web Speech API del navegador, para no depender del navegador del evaluador.
-**TTS**: síntesis nativa del navegador (`speechSynthesis`, voz `es-CO`) — decisión
-deliberada de mantener el stack simple; ver §7 para el trade-off.
+**TTS**: **Piper local**, voz `es_MX-claude-high`, servido por el backend en
+`POST /tts/synthesize` y devuelto como WAV — reemplaza la síntesis nativa del navegador
+usada en versiones anteriores del proyecto. El cambio se hizo porque `speechSynthesis`
+dependía por completo de qué voces tuviera instaladas el sistema operativo y el navegador
+del evaluador (una variable fuera de nuestro control el día de la demo), mientras que
+Piper corre localmente y produce una voz consistente sin importar el entorno. El
+frontend conserva `speechSynthesis` como *fallback* automático si Piper no está
+disponible, así que el cambio no quitó robustez, la sumó. El servidor precalienta el
+modelo de Piper en el arranque (`_warm_up_tts` en `backend/main.py`) para que la carga en
+frío (~2.5s) no le toque al primer turno de una demo en vivo — ver §7 para el detalle de
+esta decisión y su trade-off restante.
 
 ## 5. Evidencia del proceso
 
@@ -138,7 +155,9 @@ sobre cualquier contenido embebido en ese texto.
 ### 5.4. Configuración usada
 
 Variables relevantes de `.env` durante las pruebas (ver `.env.example` para el listado
-completo): `GEMINI_MODEL=gemini-3.5-flash`, `GROQ_STT_MODEL=whisper-large-v3`,
+completo): `GEMINI_MODEL=gemini-3.5-flash-lite` (cambiado desde `gemini-3.5-flash` el 2
+de septiembre por límites de cuota del free tier, ver `docs/bitacora-modelos-gemini.md`),
+`GROQ_STT_MODEL=whisper-large-v3`,
 `GROQ_STT_LANGUAGE=es`, `EMBEDDING_BACKEND=sentence-transformers`,
 `EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
 `thinking_level="MINIMAL"` en la config de Gemini 3.x para no gastar el presupuesto de
@@ -160,11 +179,21 @@ para el detalle completo y la tabla con la captura de referencia. Resumen:
 
 ## 7. Riesgos conocidos y qué se haría con dos semanas más
 
-- **TTS del navegador en vez de un modelo dedicado (Kokoro/Piper).** Se prefirió
-  `speechSynthesis` por simplicidad de integración y cero dependencias nuevas, a costa de
-  menos control sobre la prosodia y de no poder medir su latencia desde el backend (corre
-  en el cliente). Con más tiempo: integrar un TTS local para poder reportar latencia de
-  síntesis end-to-end real y mejorar el tono en español clínico.
+- **[Resuelto durante esta semana] TTS del navegador reemplazado por Piper local.** La
+  primera versión usaba `speechSynthesis` por simplicidad, pero su calidad y disponibilidad
+  dependían del sistema operativo y navegador del evaluador — una variable que no podíamos
+  controlar el día de la demo. Se evaluaron tres caminos (navegador, Gemini Native
+  Audio/Live API, y Piper local) y se eligió Piper (voz `es_MX-claude-high`) por ser el
+  único que mejoraba la voz sin tocar el orquestador, el RAG ni la lógica clínica —
+  Gemini Audio habría exigido migrar a streaming por WebSockets, un riesgo innecesario
+  para esta etapa. `speechSynthesis` se conservó como *fallback* automático.
+  **Riesgo nuevo que introduce y que sigue abierto**: al mover la síntesis al backend
+  apareció al menos una medición de latencia end-to-end atípica (~97s en una captura) que
+  la métrica actual no logra explicar por etapa, porque `end_to_end_latency_ms` mide
+  STT + RAG + generación de Gemini pero no separa la carga/síntesis de Piper del resto.
+  Con más tiempo: instrumentar la síntesis de Piper como su propia etapa medida (no solo
+  precalentada) para poder atribuir outliers como ese a una causa concreta en vez de a una
+  hipótesis.
 - **Reglas de decisión siguen siendo basadas en keywords**, aunque ahora con negación,
   regionalismos y detección de ambigüedad. Con más tiempo: entrenar o promptear un
   clasificador que use el LLM como segunda opinión sobre el score de reglas, en vez de

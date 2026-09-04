@@ -88,9 +88,20 @@ git push -u origin main
 
 ## Próximos pasos
 
-- Integrar RAG con documentos del dataset
-- Añadir voz en tiempo real (STT/TTS)
-- Implementar lógica de decisión y escalamiento clínico
+Los tres puntos originales de esta sección (RAG con el dataset, voz en tiempo real
+STT/TTS, lógica de decisión y escalamiento) ya están implementados — ver "Estado actual"
+más abajo. Lo que queda pendiente hoy es más específico:
+
+- **Cerrar la brecha de recall en rojo del motor de decisión.** El eval contra el
+  gold-set oficial (`backend/scripts/eval_gold_set.py`) subió de 25% a 41.7% de recall en
+  rojo tras corregir un bug de negación y de extracción numérica, pero sigue habiendo un
+  techo cuando el paciente menciona el valor clínico en una cláusula separada de la
+  palabra clave del síntoma — un motor de reglas puro no lo captura de forma confiable.
+- **Instrumentar la síntesis de Piper como etapa medida propia.** Al migrar el TTS del
+  navegador a Piper local apareció al menos una latencia end-to-end atípica que la
+  métrica actual no separa por etapa (ver `docs/informe-final.md` §7).
+- Evaluar streaming de audio por WebSocket si el tiempo lo permite, en vez del flujo
+  actual por turnos (grabar → detener → transcribir).
 
 ## Entregables
 
@@ -182,7 +193,7 @@ python backend/scripts/smoke_test.py
 
 ## Nota sobre el modelo
 
-La capa de llamada ya está preparada para usar uno de los modelos permitidos por `docs/stack-tecnico.md`. Por defecto queda lista para Gemini 3.5 Flash (Gemini 1.5 Flash fue retirado por Google, y Gemini 2.5 Flash dejó de estar disponible para API keys nuevas; la rúbrica exige familia, no snapshot puntual) y, si no hay clave, cae a un fallback local para que el repo siga siendo ejecutable.
+La capa de llamada ya está preparada para usar uno de los modelos permitidos por `docs/stack-tecnico.md` (Gemini 1.5 Flash fue retirado por Google, y Gemini 2.5 Flash dejó de estar disponible para API keys nuevas; la rúbrica exige familia, no snapshot puntual). Por defecto queda configurada con **`gemini-3.5-flash-lite`**, no con `gemini-3.5-flash`: en pruebas manuales, el free tier de `3.5 Flash` agotaba su cuota después de 2-3 interacciones, un riesgo real para una demo en vivo de 15 minutos frente a un jurado. `3.5 Flash Lite` respondió correctamente en las mismas pruebas con más margen de cuota disponible (ver `docs/bitacora-modelos-gemini.md`). El modelo se controla por variable de entorno (`GEMINI_MODEL`), así que se puede volver a `gemini-3.5-flash` sin tocar código si se activa facturación antes de la presentación. Si no hay `GEMINI_API_KEY` configurada, la app cae a un fallback local para que el repo siga siendo ejecutable.
 
 ---
 
