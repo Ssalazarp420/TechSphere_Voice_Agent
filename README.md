@@ -20,20 +20,33 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
 
 ## Frontend y sistema visual
 
-Las dos superficies web (`frontend/admin.html` y `frontend/call.html`) comparten ahora
-una capa visual basada en **Tailwind CSS**, cargada desde su CDN oficial porque el
-frontend es estático y no tiene un pipeline Node.js. Esta decisión no agrega una
-dependencia Python ni cambia `requirements.txt`: el backend continúa instalándose y
-ejecutándose únicamente con el entorno virtual documentado arriba.
+Las dos superficies web (`frontend/admin.html` y `frontend/call.html`) comparten un
+único sistema de diseño en **`frontend/assets/app.css`**, servido desde el propio
+repositorio. No hay CDN, no hay fuentes remotas y no hay paso de build: las páginas se
+ven igual sin conexión a internet, algo necesario para la demo en vivo. Tampoco agrega
+una dependencia Python ni cambia `requirements.txt`.
 
-La actualización incluye tipografía consistente, jerarquía visual, estados de llamada,
-controles de voz, carga de documentos, tarjetas de métricas y diseño responsive para
-escritorio y móvil. Los IDs, endpoints y flujos JavaScript existentes se conservaron,
-por lo que la mejora es visual y no altera la lógica de voz, RAG o triaje.
+`app.css` define tokens para superficies, bordes, texto, acento, semáforo de triaje,
+radios, espaciado, tipografía y sombras; encima de esos tokens viven los componentes
+(tarjeta, botón, campo, badge, aviso, métrica, burbuja de chat, lista de documentos).
+La regla de trabajo es que **todo valor visual sale de un token**: si hace falta un
+número que no está en la escala, casi siempre lo correcto es usar el escalón más
+cercano en vez de añadir un valor nuevo.
 
-El CDN requiere conexión a internet al abrir las páginas. Para un despliegue sin acceso
-externo, el siguiente paso sería incorporar Tailwind como dependencia de build local y
-servir el CSS compilado desde el propio repositorio.
+Por qué un CSS propio y no Tailwind: la versión anterior tenía las dos cosas a la vez
+—un bloque `<style>` copiado en cada página más utilidades Tailwind sobre el mismo
+HTML— y competían por las mismas propiedades, así que el resultado dependía de cuál
+regla ganara. Los tokens duplicados además habían derivado entre archivos (`--accent`
+era `#4ed6a7` en una página y `#3ddc97` en la otra), por lo que las dos superficies no
+combinaban ni entre sí.
+
+Para que el navegador alcance ese CSS, `backend/main.py` monta `frontend/assets` en
+`/assets` con `StaticFiles`. Sin ese montaje las páginas cargarían sin estilos: las
+rutas `/admin` y `/call` devuelven un `FileResponse` de un único archivo y no alcanzan
+a los recursos que ese HTML referencia.
+
+Los IDs, endpoints y flujos JavaScript existentes se conservaron, por lo que el cambio
+es visual y no altera la lógica de voz, RAG o triaje.
 
 ## Requisitos
 

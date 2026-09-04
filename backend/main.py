@@ -5,6 +5,7 @@ from time import perf_counter
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import os
@@ -339,6 +340,14 @@ def delete_admin_document(document_id: str):
         return service.delete_document(document_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+# El CSS compartido de las dos páginas (frontend/assets/app.css) se sirve desde
+# el propio repositorio, no desde un CDN, para que la interfaz se vea igual sin
+# conexión a internet. Sin este montaje las páginas cargarían sin estilos: las
+# rutas /admin y /call devuelven un FileResponse de un único archivo y no
+# alcanzan a los recursos que ese HTML referencia.
+app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
 
 
 @app.get("/admin")

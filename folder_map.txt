@@ -7,6 +7,8 @@ tu-repo/
 │   ├── voice/                # STT/TTS
 │   └── agent/                # lógica de conversación + decisión
 ├── frontend/
+│   ├── assets/
+│   │   └── app.css           # sistema de diseño compartido (tokens + componentes)
 │   ├── admin.html            # consola de administración
 │   └── call.html             # interfaz de llamada
 ├── data/                      # aquí van los xlsx/pdf del dataset (gitignored o no, decides)
