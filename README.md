@@ -85,20 +85,72 @@ es visual y no altera la lógica de voz, RAG o triaje.
    uv pip install --python .venv/bin/python -r requirements.txt
    ```
 
-3. Generar el catálogo e indexar el corpus
-  ```bash
-  python backend/scripts/build_knowledge_base.py
-  python backend/scripts/index_corpus.py
-  ```
-
-4. Ejecutar la API
+3. Configurar las claves
    ```bash
-   uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+   cp .env.example .env
    ```
+   Edita `.env` y pon tus claves de Gemini y Groq. Sin ellas el agente arranca
+   pero no puede generar respuestas ni transcribir audio. Ver
+   [Variables de entorno](#variables-de-entorno) para el detalle de cada valor.
 
-5. Abrir en el navegador
-   - http://localhost:8000/admin
-   - http://localhost:8000/call
+4. Generar el catálogo e indexar el corpus — **opcional**
+   ```bash
+   python backend/scripts/build_knowledge_base.py
+   python backend/scripts/index_corpus.py
+   ```
+   El índice ya viene pre-construido en `backend/data/chroma/` (6234 fragmentos
+   con `paraphrase-multilingual-MiniLM-L12-v2`), así que este paso solo hace
+   falta si agregas documentos al corpus o cambias `EMBEDDING_MODEL`. La
+   indexación completa tarda varios minutos.
+
+5. Ejecutar la API
+   ```bash
+   # Desde la RAÍZ del repositorio, con el entorno virtual activado:
+   uvicorn backend.main:app --reload --port 8000
+   ```
+   Queda escuchando en `http://127.0.0.1:8000`. Se detiene con `Ctrl+C`.
+
+   Detalles que importan:
+   - El módulo se escribe `backend.main:app` (con punto) cuando lanzas desde la
+     raíz. Desde dentro de `backend/` sería `main:app` y también funciona: las
+     rutas del corpus, el índice y `frontend/assets` se derivan de la ubicación
+     del propio archivo (`Path(__file__).resolve().parents[1]`), no del
+     directorio de trabajo. Aun así, usa la forma desde la raíz: es la que
+     asumen el resto de los comandos de este README.
+   - `--reload` reinicia el servidor al guardar un archivo. Cómodo para
+     desarrollar, pero recarga el modelo de embeddings en cada reinicio (~14 s).
+     Para una demo, omítelo.
+   - Añade `--host 0.0.0.0` **solo** si necesitas abrirlo desde otro equipo de
+     la red; por defecto escucha únicamente en tu máquina, que es lo que quieres
+     para una demo local.
+   - Si no activaste el entorno virtual, invoca su intérprete directamente:
+     `.venv/bin/python -m uvicorn backend.main:app --port 8000`
+     (en Windows: `.venv\Scripts\python -m uvicorn ...`).
+
+6. Abrir en el navegador
+   - http://localhost:8000/call — interfaz de llamada
+   - http://localhost:8000/admin — consola de administración
+
+   El primer turno tarda más que los siguientes: el modelo de embeddings se
+   carga de forma diferida (`@lru_cache` en `get_vector_store()`), en el primer
+   uso real del RAG — unos 14 s. Si vas a presentar en vivo, haz un turno de
+   prueba antes de empezar para que esa carga no le toque al primero de verdad.
+   El TTS de Piper sí se precalienta en el arranque, así que el servidor tarda
+   un par de segundos más en levantar pero no hay silencio en el primer turno.
+
+### Si el puerto 8000 está ocupado
+
+`[Errno 98] Address already in use` casi siempre significa que quedó una
+instancia anterior corriendo (típico tras cerrar la terminal sin `Ctrl+C`).
+Para identificarla y cerrarla:
+
+```bash
+ss -ltnp | grep ':8000'      # muestra el PID que tiene el puerto
+kill <PID>                   # cierre limpio
+```
+
+Alternativa: dejar la instancia vieja en paz y levantar la nueva en otro
+puerto con `--port 8001`.
 
 ## Variables de entorno
 
