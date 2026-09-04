@@ -93,15 +93,23 @@ es visual y no altera la lógica de voz, RAG o triaje.
    pero no puede generar respuestas ni transcribir audio. Ver
    [Variables de entorno](#variables-de-entorno) para el detalle de cada valor.
 
-4. Generar el catálogo e indexar el corpus — **opcional**
+4. Generar el catálogo e indexar el corpus — **obligatorio en un clon nuevo**
    ```bash
    python backend/scripts/build_knowledge_base.py
    python backend/scripts/index_corpus.py
    ```
-   El índice ya viene pre-construido en `backend/data/chroma/` (6234 fragmentos
-   con `paraphrase-multilingual-MiniLM-L12-v2`), así que este paso solo hace
-   falta si agregas documentos al corpus o cambias `EMBEDDING_MODEL`. La
-   indexación completa tarda varios minutos.
+   Construye `backend/data/corpus_catalog.json` y el índice vectorial en
+   `backend/data/chroma/` (unos 6234 fragmentos con
+   `paraphrase-multilingual-MiniLM-L12-v2`) a partir de los 107 documentos de
+   `dataset/textos/`, que sí están versionados. Tarda varios minutos y baja el
+   modelo de embeddings la primera vez.
+
+   Estos artefactos **no** se versionan, a propósito: se reconstruyen desde
+   fuentes que ya están en el repo, y tenerlos versionados solo causaba
+   conflictos. Basta con ejecutar la app para que cambien —SQLite reescribe
+   `chroma.sqlite3` con solo abrirlo— y git no sabe fusionar un binario, así
+   que cualquier `git pull` quedaba bloqueado hasta descartar los cambios a
+   mano. Si ya tienes el índice construido, este paso no hace falta otra vez.
 
 5. Ejecutar la API
    ```bash

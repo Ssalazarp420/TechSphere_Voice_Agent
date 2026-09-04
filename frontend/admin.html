@@ -156,10 +156,32 @@
             <div class="metric"><span class="metric-value">${data.text_documents}</span><span class="metric-label">Documentos con texto</span></div>
             <div class="metric"><span class="metric-value">${data.scanned_documents}</span><span class="metric-label">Escaneados (sin OCR)</span></div>
           `;
-          statusBox.className = `notice notice-${data.catalog_exists ? 'success' : 'warning'}`;
-          statusBox.innerHTML = data.catalog_exists
-            ? '<strong>Catálogo disponible.</strong> El agente está recuperando conocimiento del corpus indexado.'
-            : '<strong>Catálogo no encontrado.</strong> Genera el catálogo e indexa el corpus antes de la llamada.';
+          // El indice ya no se versiona (se reconstruye desde dataset/textos/),
+          // asi que en un clon nuevo llega vacio. Sin un aviso explicito el
+          // sintoma seria mudo: el agente responde, pero sin ninguna referencia
+          // del corpus, y no hay nada en pantalla que explique por que.
+          if (!data.indexed_chunks) {
+            statusBox.className = 'notice notice-danger';
+            statusBox.innerHTML =
+              '<strong>El índice está vacío.</strong> El agente responderá sin recuperar ' +
+              'conocimiento del corpus. Constrúyelo con:' +
+              '<br><code>python backend/scripts/build_knowledge_base.py</code>' +
+              '<br><code>python backend/scripts/index_corpus.py</code>';
+          } else if (data.dimension_mismatch) {
+            statusBox.className = 'notice notice-danger';
+            statusBox.innerHTML =
+              `<strong>Desfase de dimensiones.</strong> El índice se construyó con ` +
+              `${data.actual_index_dimensions} dimensiones y el modelo actual usa ` +
+              `${data.embedding_dimensions}. Reindexa el corpus para que vuelvan a coincidir.`;
+          } else if (!data.catalog_exists) {
+            statusBox.className = 'notice notice-warning';
+            statusBox.innerHTML =
+              '<strong>Catálogo no encontrado.</strong> Genera el catálogo antes de la llamada.';
+          } else {
+            statusBox.className = 'notice notice-success';
+            statusBox.innerHTML =
+              '<strong>Catálogo disponible.</strong> El agente está recuperando conocimiento del corpus indexado.';
+          }
         } catch (error) {
           statusGrid.innerHTML = '';
           statusBox.className = 'notice notice-danger';
