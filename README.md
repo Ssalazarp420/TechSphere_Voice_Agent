@@ -20,20 +20,33 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
 
 ## Frontend y sistema visual
 
-Las dos superficies web (`frontend/admin.html` y `frontend/call.html`) comparten ahora
-una capa visual basada en **Tailwind CSS**, cargada desde su CDN oficial porque el
-frontend es estático y no tiene un pipeline Node.js. Esta decisión no agrega una
-dependencia Python ni cambia `requirements.txt`: el backend continúa instalándose y
-ejecutándose únicamente con el entorno virtual documentado arriba.
+Las dos superficies web (`frontend/admin.html` y `frontend/call.html`) comparten un
+único sistema de diseño en **`frontend/assets/app.css`**, servido desde el propio
+repositorio. No hay CDN, no hay fuentes remotas y no hay paso de build: las páginas se
+ven igual sin conexión a internet, algo necesario para la demo en vivo. Tampoco agrega
+una dependencia Python ni cambia `requirements.txt`.
 
-La actualización incluye tipografía consistente, jerarquía visual, estados de llamada,
-controles de voz, carga de documentos, tarjetas de métricas y diseño responsive para
-escritorio y móvil. Los IDs, endpoints y flujos JavaScript existentes se conservaron,
-por lo que la mejora es visual y no altera la lógica de voz, RAG o triaje.
+`app.css` define tokens para superficies, bordes, texto, acento, semáforo de triaje,
+radios, espaciado, tipografía y sombras; encima de esos tokens viven los componentes
+(tarjeta, botón, campo, badge, aviso, métrica, burbuja de chat, lista de documentos).
+La regla de trabajo es que **todo valor visual sale de un token**: si hace falta un
+número que no está en la escala, casi siempre lo correcto es usar el escalón más
+cercano en vez de añadir un valor nuevo.
 
-El CDN requiere conexión a internet al abrir las páginas. Para un despliegue sin acceso
-externo, el siguiente paso sería incorporar Tailwind como dependencia de build local y
-servir el CSS compilado desde el propio repositorio.
+Por qué un CSS propio y no Tailwind: la versión anterior tenía las dos cosas a la vez
+—un bloque `<style>` copiado en cada página más utilidades Tailwind sobre el mismo
+HTML— y competían por las mismas propiedades, así que el resultado dependía de cuál
+regla ganara. Los tokens duplicados además habían derivado entre archivos (`--accent`
+era `#4ed6a7` en una página y `#3ddc97` en la otra), por lo que las dos superficies no
+combinaban ni entre sí.
+
+Para que el navegador alcance ese CSS, `backend/main.py` monta `frontend/assets` en
+`/assets` con `StaticFiles`. Sin ese montaje las páginas cargarían sin estilos: las
+rutas `/admin` y `/call` devuelven un `FileResponse` de un único archivo y no alcanzan
+a los recursos que ese HTML referencia.
+
+Los IDs, endpoints y flujos JavaScript existentes se conservaron, por lo que el cambio
+es visual y no altera la lógica de voz, RAG o triaje.
 
 ## Requisitos
 
@@ -41,9 +54,14 @@ servir el CSS compilado desde el propio repositorio.
   muy reciente y `tokenizers` (dependencia de `transformers`/`sentence-transformers`)
   todavía no publica wheel precompilado para ella, así que `pip install` intenta
   compilarlo desde código Rust y falla si no tienes el toolchain de Rust/Cargo
-  instalado. `backend/requirements.txt` ya usa un rango (`transformers>=4.46.3,<5.0.0`)
-  en vez de una versión exacta para no forzar un downgrade de `tokenizers` a una
-  versión sin wheel, pero la versión de Python la eliges tú al crear el entorno.
+  instalado. `requirements.txt` pinnea versiones exactas del stack de embeddings
+  (`transformers==4.57.6`, `tokenizers==0.22.2`, `torch==2.13.0`, entre otras)
+  porque un rango abierto permitía que pip resolviera combinaciones distintas en
+  cada máquina — la causa de que el mismo código funcionara en un entorno y
+  fallara en otro con el error "Cannot copy out of meta tensor". Esas versiones
+  sí traen wheel para 3.11-3.13; la versión de Python la eliges tú al crear el
+  entorno. No añadas `accelerate`: no es dependencia del proyecto y es la causa
+  más probable de ese mismo error (ver `backend/rag/embeddings.py`).
 - pip (o [`uv`](https://docs.astral.sh/uv/), más rápido y con gestión de versiones de
   Python integrada — así se probó este repo)
 
@@ -62,25 +80,85 @@ servir el CSS compilado desde el propio repositorio.
 
 2. Instalar dependencias
    ```bash
-   pip install -r backend/requirements.txt
+   pip install -r requirements.txt
    # o, con uv:
-   uv pip install --python .venv/bin/python -r backend/requirements.txt
+   uv pip install --python .venv/bin/python -r requirements.txt
    ```
 
-3. Generar el catálogo e indexar el corpus
-  ```bash
-  python backend/scripts/build_knowledge_base.py
-  python backend/scripts/index_corpus.py
-  ```
-
-4. Ejecutar la API
+3. Configurar las claves
    ```bash
-   uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+   cp .env.example .env
    ```
+   Edita `.env` y pon tus claves de Gemini y Groq. Sin ellas el agente arranca
+   pero no puede generar respuestas ni transcribir audio. Ver
+   [Variables de entorno](#variables-de-entorno) para el detalle de cada valor.
 
-5. Abrir en el navegador
-   - http://localhost:8000/admin
-   - http://localhost:8000/call
+4. Generar el catálogo e indexar el corpus — **obligatorio en un clon nuevo**
+   ```bash
+   python backend/scripts/build_knowledge_base.py
+   python backend/scripts/index_corpus.py
+   ```
+   Construye `backend/data/corpus_catalog.json` y el índice vectorial en
+   `backend/data/chroma/` (unos 6234 fragmentos con
+   `paraphrase-multilingual-MiniLM-L12-v2`) a partir de los 107 documentos de
+   `dataset/textos/`, que sí están versionados. Tarda varios minutos y baja el
+   modelo de embeddings la primera vez.
+
+   Estos artefactos **no** se versionan, a propósito: se reconstruyen desde
+   fuentes que ya están en el repo, y tenerlos versionados solo causaba
+   conflictos. Basta con ejecutar la app para que cambien —SQLite reescribe
+   `chroma.sqlite3` con solo abrirlo— y git no sabe fusionar un binario, así
+   que cualquier `git pull` quedaba bloqueado hasta descartar los cambios a
+   mano. Si ya tienes el índice construido, este paso no hace falta otra vez.
+
+5. Ejecutar la API
+   ```bash
+   # Desde la RAÍZ del repositorio, con el entorno virtual activado:
+   uvicorn backend.main:app --reload --port 8000
+   ```
+   Queda escuchando en `http://127.0.0.1:8000`. Se detiene con `Ctrl+C`.
+
+   Detalles que importan:
+   - El módulo se escribe `backend.main:app` (con punto) cuando lanzas desde la
+     raíz. Desde dentro de `backend/` sería `main:app` y también funciona: las
+     rutas del corpus, el índice y `frontend/assets` se derivan de la ubicación
+     del propio archivo (`Path(__file__).resolve().parents[1]`), no del
+     directorio de trabajo. Aun así, usa la forma desde la raíz: es la que
+     asumen el resto de los comandos de este README.
+   - `--reload` reinicia el servidor al guardar un archivo. Cómodo para
+     desarrollar, pero recarga el modelo de embeddings en cada reinicio (~14 s).
+     Para una demo, omítelo.
+   - Añade `--host 0.0.0.0` **solo** si necesitas abrirlo desde otro equipo de
+     la red; por defecto escucha únicamente en tu máquina, que es lo que quieres
+     para una demo local.
+   - Si no activaste el entorno virtual, invoca su intérprete directamente:
+     `.venv/bin/python -m uvicorn backend.main:app --port 8000`
+     (en Windows: `.venv\Scripts\python -m uvicorn ...`).
+
+6. Abrir en el navegador
+   - http://localhost:8000/call — interfaz de llamada
+   - http://localhost:8000/admin — consola de administración
+
+   El primer turno tarda más que los siguientes: el modelo de embeddings se
+   carga de forma diferida (`@lru_cache` en `get_vector_store()`), en el primer
+   uso real del RAG — unos 14 s. Si vas a presentar en vivo, haz un turno de
+   prueba antes de empezar para que esa carga no le toque al primero de verdad.
+   El TTS de Piper sí se precalienta en el arranque, así que el servidor tarda
+   un par de segundos más en levantar pero no hay silencio en el primer turno.
+
+### Si el puerto 8000 está ocupado
+
+`[Errno 98] Address already in use` casi siempre significa que quedó una
+instancia anterior corriendo (típico tras cerrar la terminal sin `Ctrl+C`).
+Para identificarla y cerrarla:
+
+```bash
+ss -ltnp | grep ':8000'      # muestra el PID que tiene el puerto
+kill <PID>                   # cierre limpio
+```
+
+Alternativa: dejar la instancia vieja en paz y levantar la nueva en otro
+puerto con `--port 8001`.
 
 ## Variables de entorno
 

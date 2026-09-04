@@ -200,15 +200,65 @@ _PAIN_WORD_VALUES = {
     "nueve": 9.0,
     "diez": 10.0,
 }
-_PAIN_WORD_PATTERN = re.compile(r"\bun[oa]?\s+(" + "|".join(_PAIN_WORD_VALUES) + r")\b")
+# Conectores que pueden preceder a un nivel de dolor escrito en palabras.
+# Antes solo se aceptaba "un/uno/una" ("el dolor está en un ocho"), así que
+# las demás formas naturales de decirlo en voz —"dolor de nueve", "el dolor
+# es de nueve", "dolor nivel nueve", "me duele como nueve"— no extraían
+# ningún valor y el turno caía a verde pese a ser un dolor severo. Medido
+# antes del arreglo: de seis formas de decir "dolor de nueve", cinco daban
+# pain_value=None y label=verde.
+_PAIN_WORD_CONNECTORS = r"(?:un[oa]?|de|en|como|nivel|sobre|es)"
+
+# Un número escrito en palabras seguido de una unidad de tiempo es una
+# DURACIÓN, no una intensidad: "me duele hace tres días" no es un dolor de 3.
+# Sin esta guarda, ampliar los conectores introduce ese falso positivo.
+_PAIN_TIME_UNIT = r"(?:d[ií]as?|semanas?|horas?|meses|mes|minutos?|noches?|veces|a[nñ]os?)"
+
+# "un"/"una" quedan fuera de la alternancia de VALORES aunque valgan 1: en
+# "el dolor está en un nueve" hacen de artículo, no de cifra, y al estar en la
+# lista el motor casaba "en un" y devolvía 1.0 en vez de seguir hasta "nueve".
+# Por eso el artículo se admite aparte, como paso opcional entre el conector y
+# el valor. "uno" sí se conserva: como numeral no es ambiguo.
+_PAIN_WORD_NUMERALS = sorted(
+    (word for word in _PAIN_WORD_VALUES if word not in {"un", "una"}),
+    key=len,
+    reverse=True,
+)
+
+_PAIN_WORD_PATTERN = re.compile(
+    r"\b" + _PAIN_WORD_CONNECTORS + r"\s+(?:un[oa]?\s+)?("
+    + "|".join(_PAIN_WORD_NUMERALS)
+    + r")\b(?!\s+" + _PAIN_TIME_UNIT + r")"
+)
 # Separador de cláusulas que NO corta dentro de un número decimal: sin el
 # lookaround, "38.1°C" se partía en cláusulas "38" y "1°c" por el punto
 # decimal, y el regex de número solo veía "38" — perdiendo el decimal (no
 # afecta el umbral de fiebre aquí, pero sí sería un problema en otros casos).
-_CLAUSE_SPLIT_PATTERN = re.compile(r"(?<!\d)[.,;!?¿()]+(?!\d)")
+# El lookbehind original, `(?<!\d)[.,;!?¿()]+(?!\d)`, buscaba proteger los
+# decimales ("38.1" no debe partirse en "38" y "1"), pero al exigir que NO
+# hubiera un dígito delante impedía cortar tras cualquier número: "el dolor
+# está en un 6, sin fiebre" quedaba como UNA sola cláusula, y como contenía la
+# palabra "fiebre" y el número 6, la temperatura se extraía como 6.0. Ahora se
+# protege solo el caso real: un punto o coma con dígitos a AMBOS lados.
+_CLAUSE_SPLIT_PATTERN = re.compile(r"(?:(?<!\d)[.,]|[.,](?!\d)|[;!?¿()])+")
 
 
-def _extract_numeric_value(text: str, keywords: list[str], allow_pain_words: bool = False) -> float | None:
+# Ningun numero suelto vale como medida clinica: una escala de dolor vive en
+# 0-10 y una temperatura corporal en 35-42. Sin acotar el rango, cualquier
+# cifra de la misma clausula servia — "me operaron hace 40 dias y no he tenido
+# fiebre" daba temperatura 40.0 y, con ello, ROJO. Verificado que ya ocurria
+# antes de estos cambios, en el commit 9c80a1d.
+_DURATION_GUARD = r"(?!\s*(?:a[nñ]os?|d[ií]as?|semanas?|meses|mes|horas?|minutos?|noches?|veces))"
+_PAIN_DIGIT_PATTERN = re.compile(r"\b(10|[0-9])(?:[.,]\d+)?\b" + _DURATION_GUARD)
+_GENERIC_NUMBER_PATTERN = re.compile(r"(\d+(?:[.,]\d+)?)")
+
+
+def _extract_numeric_value(
+    text: str,
+    keywords: list[str],
+    allow_pain_words: bool = False,
+    value_pattern: re.Pattern[str] | None = None,
+) -> float | None:
     """Busca el primer número que aparece en la MISMA cláusula que alguna
     keyword, sin exigir que el número siga inmediatamente a la palabra.
 
@@ -236,7 +286,7 @@ def _extract_numeric_value(text: str, keywords: list[str], allow_pain_words: boo
     for clause in clauses:
         if not any(keyword in clause for keyword in keywords):
             continue
-        digit_match = re.search(r"(\d+(?:[.,]\d+)?)", clause)
+        digit_match = (value_pattern or _GENERIC_NUMBER_PATTERN).search(clause)
         if digit_match:
             try:
                 return float(digit_match.group(1).replace(",", "."))
@@ -268,6 +318,66 @@ _NEGATION_WORDS = ["no", "sin", "nunca", "jamás", "jamas", "niega", "ausencia d
 _NEGATION_WORD_PATTERN = re.compile(r"\b(" + "|".join(w.replace(" ", r"\s+") for w in _NEGATION_WORDS) + r")\b")
 
 
+# --- Temperatura mencionada sin repetir la palabra clave ----------------------
+# _extract_numeric_value exige que la keyword ("fiebre"/"temperatura") esté en
+# la MISMA cláusula que el número. Al hablar, casi nadie repite la palabra:
+# dice "me la tomé y marcaba como 38 y algo" o "creo que como 39". El número
+# queda en una cláusula sin keyword y no se extrae, así que una fiebre real
+# no sumaba sus +3 y el turno caía a verde.
+#
+# Medido en el gold-set, tres falsos negativos rojo venían exactamente de aquí:
+#   "la tomé y marcaba como 38 y algo"  -> temperature_value=None
+#   "Marcaba como 39 algo"              -> temperature_value=None
+#   "afiebrada... creo que como 38"     -> temperature_value=None
+#
+# Regla de respaldo: si el turno habla de fiebre en cualquier parte, se acepta
+# un número en el rango fisiológico plausible (35-42) de todo el turno. Fuera
+# de ese rango no se toca nada, y una escala de dolor (0-10) nunca lo alcanza.
+_FEVER_CONTEXT_PATTERN = re.compile(
+    r"\b(fiebre|calentura|temperatura|term[oó]metro|afiebrad[oa]s?|destemplad[oa]s?"
+    r"|calientic[oa]s?|caliente|escalofr[ií]os?|me la tom[eé])\b"
+)
+
+# El guardarraíl que hace segura la regla anterior: 38 puede ser una edad o un
+# número de días. Sin esto, "tengo 38 años" se leería como fiebre de 38.
+_TEMPERATURE_VALUE_PATTERN = re.compile(
+    r"\b(3[5-9](?:[.,]\d+)?|4[0-2](?:[.,]\d+)?)\b"
+    r"(?!\s*(?:a[nñ]os?|d[ií]as?|semanas?|meses|mes|horas?|minutos?|veces))"
+)
+
+
+# --- Drenaje purulento --------------------------------------------------------
+# Un líquido amarillo saliendo de la herida es drenaje purulento: bandera roja
+# de infección de sitio operatorio. La lista de keywords solo tenía "pus" y
+# "secreción con mal olor", y ningún paciente del gold-set lo dice así — lo
+# describen como "un líquido, amarillo creo, saliendo de ahí" o "le sale un
+# poquito de líquido ahí, como amarillito". Dos falsos negativos rojo venían
+# de esto, ambos clasificados verde con score 0.
+#
+# Se acepta en los dos órdenes (líquido→color y color→líquido) y se tolera
+# puntuación intermedia, porque en el habla real la descripción viene partida
+# por comas: "un líquido, amarillo creo, saliendo".
+_DRAINAGE_TERMS = r"(?:l[ií]quido|secreci[oó]n|drenaje|supura\w*|le sale|me sale)"
+_PURULENT_TERMS = r"(?:amarill\w+|verdos\w+|purulent\w+|espes[oa]s?)"
+_PURULENT_DRAINAGE_PATTERN = re.compile(
+    _DRAINAGE_TERMS + r"[^.;]{0,45}?" + _PURULENT_TERMS
+    + r"|" + _PURULENT_TERMS + r"[^.;]{0,45}?" + _DRAINAGE_TERMS
+)
+
+
+def _is_negated_before(lowered: str, start: int) -> bool:
+    """¿Hay una negación entre el inicio de la oración y esta posición?
+
+    Se mira solo hacia ATRÁS a propósito. En "sí le sale líquido amarillito,
+    pero no es mucho" la negación va después y niega la cantidad, no el
+    hallazgo; contarla marcaría como ausente un síntoma que el paciente sí
+    reportó. El límite es la oración (punto o punto y coma), no la cláusula,
+    porque estas descripciones vienen partidas por comas.
+    """
+    inicio_oracion = max(lowered.rfind(".", 0, start), lowered.rfind(";", 0, start)) + 1
+    return bool(_NEGATION_WORD_PATTERN.search(lowered[inicio_oracion:start]))
+
+
 def _is_negated(lowered: str, keyword: str) -> bool:
     for clause in _CLAUSE_SPLIT_PATTERN.split(lowered):
         if keyword in clause and _NEGATION_WORD_PATTERN.search(clause):
@@ -282,8 +392,23 @@ def classify_report(text: str) -> dict[str, object]:
         keyword for keyword in YELLOW_FLAG_KEYWORDS if keyword in lowered and not _is_negated(lowered, keyword)
     ]
 
-    pain_value = _extract_numeric_value(lowered, ["dolor", "pain"], allow_pain_words=True)
-    temperature_value = _extract_numeric_value(lowered, ["fiebre", "temperatura", "temp"])
+    # "duele"/"duelen" además de "dolor": la cláusula se descarta antes de
+    # buscar el número si no contiene ninguna keyword, así que "me duele como
+    # nueve" no llegaba siquiera a evaluarse.
+    pain_value = _extract_numeric_value(
+        lowered, ["dolor", "duele", "duelen", "pain"], allow_pain_words=True, value_pattern=_PAIN_DIGIT_PATTERN
+    )
+    temperature_value = _extract_numeric_value(
+        lowered, ["fiebre", "temperatura", "temp"], value_pattern=_TEMPERATURE_VALUE_PATTERN
+    )
+    if temperature_value is None and _FEVER_CONTEXT_PATTERN.search(lowered):
+        temp_match = _TEMPERATURE_VALUE_PATTERN.search(lowered)
+        if temp_match and not _is_negated_before(lowered, temp_match.start()):
+            temperature_value = float(temp_match.group(1).replace(",", "."))
+
+    drainage_match = _PURULENT_DRAINAGE_PATTERN.search(lowered)
+    if drainage_match and not _is_negated_before(lowered, drainage_match.start()):
+        red_flags = red_flags + ["drenaje purulento (líquido amarillento en la herida)"]
 
     has_reassurance = any(pattern in lowered for pattern in REASSURANCE_PATTERNS)
     ambiguous_hits = [marker for marker in AMBIGUOUS_MARKERS if marker in lowered]

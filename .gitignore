@@ -14,7 +14,16 @@ __pycache__/
 # Archivos temporales
 *.log
 
-# Artefactos generados por el proyecto
+# Artefactos generados por el proyecto.
+#
+# Todos se reconstruyen desde fuentes que SI estan versionadas (dataset/textos/
+# son 107 documentos en el repo), asi que versionar tambien el resultado solo
+# aporta conflictos: basta con ejecutar la app para que cambien, y como git no
+# sabe fusionar un SQLite ni un JSON de estado, cualquier pull se bloquea.
+#
+# Se reconstruyen con:
+#   python backend/scripts/build_knowledge_base.py   -> corpus_catalog.json
+#   python backend/scripts/index_corpus.py           -> chroma/ y vector_index_summary.json
 backend/data/admin_uploads/
 backend/data/admin_registry.json
 backend/data/corpus_catalog.json
@@ -22,3 +31,13 @@ backend/data/vector_index_summary.json
 backend/data/call_sessions.json
 backend/data/metrics_snapshot.json
 backend/data/smoke_test_report.json
+backend/data/eval_gold_set_report.json
+
+# Indice vectorial de Chroma. Es lo mas costoso de tener versionado: son ~74MB
+# de SQLite mas los .bin del indice HNSW, y SQLite reescribe el archivo con
+# solo ABRIRLO, de modo que aparecia modificado tras cada ejecucion. Ya habia
+# acumulado 10 versiones en la historia del repo.
+backend/data/chroma/
+
+# Configuracion local del editor: preferencias por maquina, no del proyecto
+.vscode/

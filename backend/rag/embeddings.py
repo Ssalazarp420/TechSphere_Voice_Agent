@@ -92,7 +92,7 @@ class SentenceTransformerEmbeddingFunction(EmbeddingFunction[Documents]):
             from sentence_transformers import SentenceTransformer
         except ImportError as exc:  # pragma: no cover - exercised by runtime environment
             raise RuntimeError(
-                "sentence-transformers no está instalado. Ejecuta `pip install -r backend/requirements.txt` o usa EMBEDDING_BACKEND=hash."
+                "sentence-transformers no está instalado. Ejecuta `pip install -r requirements.txt` o usa EMBEDDING_BACKEND=hash."
             ) from exc
 
         kwargs: dict[str, object] = {"trust_remote_code": self.trust_remote_code}
