@@ -41,9 +41,14 @@ servir el CSS compilado desde el propio repositorio.
   muy reciente y `tokenizers` (dependencia de `transformers`/`sentence-transformers`)
   todavía no publica wheel precompilado para ella, así que `pip install` intenta
   compilarlo desde código Rust y falla si no tienes el toolchain de Rust/Cargo
-  instalado. `backend/requirements.txt` ya usa un rango (`transformers>=4.46.3,<5.0.0`)
-  en vez de una versión exacta para no forzar un downgrade de `tokenizers` a una
-  versión sin wheel, pero la versión de Python la eliges tú al crear el entorno.
+  instalado. `requirements.txt` pinnea versiones exactas del stack de embeddings
+  (`transformers==4.57.6`, `tokenizers==0.22.2`, `torch==2.13.0`, entre otras)
+  porque un rango abierto permitía que pip resolviera combinaciones distintas en
+  cada máquina — la causa de que el mismo código funcionara en un entorno y
+  fallara en otro con el error "Cannot copy out of meta tensor". Esas versiones
+  sí traen wheel para 3.11-3.13; la versión de Python la eliges tú al crear el
+  entorno. No añadas `accelerate`: no es dependencia del proyecto y es la causa
+  más probable de ese mismo error (ver `backend/rag/embeddings.py`).
 - pip (o [`uv`](https://docs.astral.sh/uv/), más rápido y con gestión de versiones de
   Python integrada — así se probó este repo)
 
@@ -62,9 +67,9 @@ servir el CSS compilado desde el propio repositorio.
 
 2. Instalar dependencias
    ```bash
-   pip install -r backend/requirements.txt
+   pip install -r requirements.txt
    # o, con uv:
-   uv pip install --python .venv/bin/python -r backend/requirements.txt
+   uv pip install --python .venv/bin/python -r requirements.txt
    ```
 
 3. Generar el catálogo e indexar el corpus

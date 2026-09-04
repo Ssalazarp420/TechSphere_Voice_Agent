@@ -1,11 +1,11 @@
 tu-repo/
 ├── README.md
+├── requirements.txt      # dependencias Python
 ├── backend/
 │   ├── main.py              # FastAPI app
 │   ├── rag/                 # ingesta, embeddings, retrieval
 │   ├── voice/                # STT/TTS
-│   ├── agent/                # lógica de conversación + decisión
-│   └── requirements.txt
+│   └── agent/                # lógica de conversación + decisión
 ├── frontend/
 │   ├── admin.html            # consola de administración
 │   └── call.html             # interfaz de llamada
