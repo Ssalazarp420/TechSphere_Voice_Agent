@@ -133,14 +133,42 @@ class CallSessionService:
         # Antes solo se exponía final_decision como dict crudo — el jurado
         # (criterio 2.3, comentado explícitamente: "el resumen solo tiene 3
         # campos útiles") tiene que entrar a ese dict para sacar cada dato. Se
-        # sube todo a campos de primer nivel legibles, tomando el último
-        # turno con decisión (el estado más reciente de la conversación) como
-        # fuente — no un acumulado de todos los turnos, porque el dolor o la
-        # fiebre reportados al inicio de la llamada pueden quedar obsoletos
-        # frente a lo que el paciente dice después.
-        red_flags = final_decision.get("red_flags") or []
-        yellow_flags = final_decision.get("yellow_flags") or []
+        # sube todo a campos de primer nivel legibles.
+        #
+        # Estos campos se acumulan sobre TODOS los turnos, no sobre
+        # final_decision. Cada turno solo extrae los síntomas y las cifras de
+        # su propio texto, así que leerlos de un único turno perdía en
+        # silencio todo lo que el paciente hubiera reportado en los demás.
+        # Medido antes del arreglo: con "dolor de nueve" en el turno 1 y
+        # "fiebre de 39, la herida supura" en el turno 2, el resumen final
+        # devolvía nivel_dolor=None y omitía la bandera de dolor — el dato
+        # que el paciente sí había dado no llegaba al informe.
+        #
+        # Se toma el PEOR valor visto, no el más reciente, por coherencia con
+        # prioridad_escalamiento (que ya es la etiqueta más severa de la
+        # llamada): si el informe dice que se escaló por rojo, tiene que
+        # mostrar las cifras que motivaron ese rojo, no unas posteriores más
+        # tranquilas. Los valores turno a turno siguen disponibles en "turns"
+        # para quien necesite la evolución cronológica.
         label = final_decision.get("label")
+
+        def _peor_valor(campo: str) -> float | None:
+            valores = [d.get(campo) for d in decisions if d.get(campo) is not None]
+            return max(valores) if valores else None
+
+        nivel_dolor = _peor_valor("pain_value")
+        temperatura = _peor_valor("temperature_value")
+
+        # Unión de banderas preservando el orden de aparición (dict.fromkeys
+        # deduplica sin perderlo): un síntoma repetido en varios turnos no
+        # debe listarse dos veces en el informe.
+        sintomas_anomalos = list(
+            dict.fromkeys(
+                flag
+                for decision in decisions
+                for flag in (decision.get("red_flags") or []) + (decision.get("yellow_flags") or [])
+            )
+        )
 
         return {
             "turn_count": len(session.turns),
@@ -148,9 +176,9 @@ class CallSessionService:
             "final_decision": final_decision,
             "reference_count": len(references),
             "reference_documents": sorted({str(ref.get("metadata", {}).get("filename", "")) for ref in references if ref}),
-            "nivel_dolor": final_decision.get("pain_value"),
-            "temperatura": final_decision.get("temperature_value"),
-            "sintomas_anomalos": red_flags + yellow_flags,
+            "nivel_dolor": nivel_dolor,
+            "temperatura": temperatura,
+            "sintomas_anomalos": sintomas_anomalos,
             # "amarillo" también dispara indagación adicional (requires_clarification),
             # pero desde la perspectiva del resumen post-llamada lo que importa es si
             # se escaló o se dejó en seguimiento ambulatorio — no hay una tercera acción
