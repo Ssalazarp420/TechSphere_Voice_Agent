@@ -38,3 +38,6 @@ backend/data/eval_gold_set_report.json
 # solo ABRIRLO, de modo que aparecia modificado tras cada ejecucion. Ya habia
 # acumulado 10 versiones en la historia del repo.
 backend/data/chroma/
+
+# Configuracion local del editor: preferencias por maquina, no del proyecto
+.vscode/
