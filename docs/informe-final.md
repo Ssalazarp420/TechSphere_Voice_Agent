@@ -20,6 +20,10 @@ de prompt descritas en la §5 de este informe).
 ## 3. Decisiones técnicas
 
 - **FastAPI** como backend principal, sirviendo también las dos superficies estáticas.
+- **Tailwind CSS vía CDN** para el sistema visual compartido de `frontend/admin.html` y
+  `frontend/call.html`. Se eligió esta integración porque el frontend está compuesto por
+  páginas HTML estáticas y no requiere un pipeline Node.js para ser reproducible junto al
+  backend Python.
 - **ChromaDB** como base vectorial local, persistida en `backend/data/chroma/` para no
   depender del entorno de ejecución (el índice viaja con el repo).
 - **`paraphrase-multilingual-MiniLM-L12-v2`** como embedding local para recuperación
@@ -38,6 +42,13 @@ de prompt descritas en la §5 de este informe).
   (STT vs. RAG+LLM) y costo estimado por llamada con tarifas configurables — ver §6.
 - Persistencia local en JSON para documentos administrados (`admin_registry.json`) y
   sesiones de llamada (`call_sessions.json`).
+
+La mejora visual del frontend se aplicó sin cambiar los contratos existentes: se
+conservaron los IDs que utiliza JavaScript, los endpoints de FastAPI y los flujos de
+llamada, voz, RAG y administración. El rediseño añade jerarquía visual, tipografía
+consistente, estados más legibles y adaptación a pantallas móviles. Para un despliegue
+sin conexión externa, Tailwind podría migrarse posteriormente a un build local; la
+versión actual requiere acceso al CDN al cargar las páginas.
 
 ## 4. Modelo usado
 

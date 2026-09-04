@@ -18,6 +18,23 @@ Proyecto base para un agente de voz orientado al seguimiento postoperatorio, con
 - data/: datos del reto y documentos del corpus
 - docs/: arquitectura, informe final y entregables
 
+## Frontend y sistema visual
+
+Las dos superficies web (`frontend/admin.html` y `frontend/call.html`) comparten ahora
+una capa visual basada en **Tailwind CSS**, cargada desde su CDN oficial porque el
+frontend es estático y no tiene un pipeline Node.js. Esta decisión no agrega una
+dependencia Python ni cambia `requirements.txt`: el backend continúa instalándose y
+ejecutándose únicamente con el entorno virtual documentado arriba.
+
+La actualización incluye tipografía consistente, jerarquía visual, estados de llamada,
+controles de voz, carga de documentos, tarjetas de métricas y diseño responsive para
+escritorio y móvil. Los IDs, endpoints y flujos JavaScript existentes se conservaron,
+por lo que la mejora es visual y no altera la lógica de voz, RAG o triaje.
+
+El CDN requiere conexión a internet al abrir las páginas. Para un despliegue sin acceso
+externo, el siguiente paso sería incorporar Tailwind como dependencia de build local y
+servir el CSS compilado desde el propio repositorio.
+
 ## Requisitos
 
 - **Python 3.11, 3.12 o 3.13.** Evita 3.14: al momento de escribir esto es una versión

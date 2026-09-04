@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Interfaz de llamada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <style>
       :root {
         --bg: #07111f;
@@ -21,12 +25,12 @@
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: Inter, system-ui, sans-serif;
+        font-family: 'DM Sans', sans-serif;
         color: var(--text);
         background:
           radial-gradient(circle at top, rgba(78, 214, 167, 0.14), transparent 32%),
           radial-gradient(circle at right top, rgba(110, 168, 255, 0.2), transparent 30%),
-          linear-gradient(180deg, #07111f 0%, #091423 100%);
+          linear-gradient(135deg, #060d18 0%, #0b1628 52%, #08111e 100%);
       }
 
       .shell { max-width: 1200px; margin: 0 auto; padding: 28px 18px 56px; }
@@ -47,6 +51,7 @@
       }
 
       h1, h2, h3, p { margin-top: 0; }
+      h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em; }
       h1 { font-size: clamp(2rem, 4vw, 3.4rem); line-height: 0.95; margin-bottom: 10px; }
       .lede { color: var(--muted); max-width: 66ch; }
       .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
@@ -83,7 +88,10 @@
         padding: 12px 16px;
         cursor: pointer;
         font-weight: 700;
+        transition: transform 160ms ease, filter 160ms ease, border-color 160ms ease;
       }
+      button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+      button:disabled { cursor: wait; opacity: 0.58; }
       .primary { background: linear-gradient(135deg, var(--accent), #21d17f); color: #07111b; }
       .secondary { background: rgba(110, 168, 255, 0.16); color: var(--text); border: 1px solid rgba(110, 168, 255, 0.35); }
       .danger { background: rgba(255, 123, 138, 0.16); color: #ffd9de; border: 1px solid rgba(255, 123, 138, 0.38); }
@@ -223,24 +231,28 @@
   <body>
     <div class="shell">
       <div class="hero">
-        <section class="card">
-          <p class="small">TechSphere Voice Agent · interfaz de llamada</p>
-          <h1>Habla con el agente y escucha la respuesta.</h1>
+        <section class="card relative overflow-hidden border-emerald-300/20 bg-slate-950/70 p-7 md:p-9">
+          <div class="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-emerald-300/10 blur-3xl"></div>
+          <p class="small relative uppercase tracking-[0.16em] text-emerald-200/80">TechSphere · seguimiento postoperatorio</p>
+          <h1 class="relative max-w-2xl">Una conversación clínica que empieza escuchando.</h1>
           <p class="lede">Esta versión ya conversa con el backend, recupera conocimiento del corpus y toma una decisión preliminar de escalamiento. El reconocimiento de voz corre en el backend con Groq Whisper; la respuesta hablada usa síntesis del navegador.</p>
           <div class="chip-row">
-            <span class="chip">Micrófono opcional</span>
-            <span class="chip">Respuesta hablada</span>
+            <span class="chip border-emerald-300/20 bg-emerald-300/10">Micrófono opcional</span>
+            <span class="chip border-sky-300/20 bg-sky-300/10">Respuesta hablada</span>
             <span class="chip">RAG con trazabilidad</span>
             <span class="chip">Escalamiento preliminar</span>
           </div>
         </section>
 
-        <aside class="card">
-          <h3>Estado de llamada</h3>
-          <div id="callStatus" class="status">Listo para iniciar.</div>
+        <aside class="card border-sky-300/20 bg-slate-950/70 p-6">
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <h3 class="mb-0">Estado de llamada</h3>
+            <span class="badge green border border-emerald-300/20 bg-emerald-300/10"><span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span> Listo</span>
+          </div>
+          <div id="callStatus" class="status border-slate-700/70 bg-slate-900/70">Listo para iniciar.</div>
           <div style="margin-top: 12px;">
             <label for="patientSelect" class="small">Paciente (opcional)</label>
-            <select id="patientSelect" style="width: 100%; margin-top: 4px;">
+            <select id="patientSelect" class="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-slate-100 outline-none focus:border-emerald-300/60" style="width: 100%;">
               <option value="">Sin identidad — saludo genérico</option>
             </select>
           </div>
@@ -254,31 +266,35 @@
       </div>
 
       <div class="grid">
-        <section class="card span-7">
-          <h2>Conversación</h2>
+        <section class="card span-7 border-slate-700/80 bg-slate-950/75 p-6 md:p-7">
+          <div class="mb-5 flex items-center justify-between gap-3">
+            <div><p class="small mb-1 uppercase tracking-[0.14em] text-slate-500">Canal seguro</p><h2 class="mb-0">Conversación</h2></div>
+            <span class="badge border border-slate-700 bg-slate-900/80 text-slate-300">En vivo</span>
+          </div>
           <div id="conversation" class="conversation" aria-live="polite"></div>
         </section>
 
-        <section class="card span-5">
+        <section class="card span-5 border-slate-700/80 bg-slate-950/75 p-6 md:p-7">
+          <p class="small mb-1 uppercase tracking-[0.14em] text-slate-500">Entrada del paciente</p>
           <h2>Turno actual</h2>
           <label for="utteranceInput">Texto del paciente</label>
-          <textarea id="utteranceInput" placeholder="Ej: Me duele bastante el abdomen, tengo fiebre y la herida huele raro."></textarea>
+          <textarea id="utteranceInput" class="min-h-36 rounded-2xl border-slate-700 bg-slate-900/80 placeholder:text-slate-500 focus:border-emerald-300/60" placeholder="Ej: Me duele bastante el abdomen, tengo fiebre y la herida huele raro."></textarea>
           <div class="toolbar" style="margin-top: 14px;">
             <button class="primary" id="sendBtn">Enviar turno</button>
             <button class="secondary" id="micBtn">Usar micrófono</button>
           </div>
           <div id="decisionBox" class="status hidden"></div>
-          <div class="status" id="referencesBox" style="margin-top: 12px;">
+          <div class="status mt-3" id="referencesBox">
             Aún no hay referencias recuperadas.
           </div>
-          <div class="status" id="sessionBox" style="margin-top: 12px;">
+          <div class="status mt-3" id="sessionBox">
             Sesión: no iniciada.
           </div>
         </section>
       </div>
 
       <div class="grid" style="margin-top: 20px;">
-        <section class="card span-12">
+        <section class="card span-12 border-slate-700/80 bg-slate-950/75 p-6 md:p-7">
           <div class="toolbar" style="justify-content: space-between; align-items: start;">
             <div>
               <h2 style="margin-bottom: 6px;">Resumen de sesión</h2>

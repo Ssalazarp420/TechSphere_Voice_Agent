@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Consola de administración</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <style>
       :root {
         --bg: #09111f;
@@ -22,7 +26,7 @@
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: Inter, system-ui, sans-serif;
+        font-family: 'DM Sans', sans-serif;
         color: var(--text);
         background:
           radial-gradient(circle at top left, rgba(61, 220, 151, 0.16), transparent 35%),
@@ -53,6 +57,7 @@
       }
 
       h1, h2, h3, p { margin-top: 0; }
+      h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em; }
       h1 {
         font-size: clamp(2rem, 4vw, 3.5rem);
         line-height: 0.95;
@@ -110,7 +115,10 @@
         padding: 12px 16px;
         cursor: pointer;
         font-weight: 700;
+        transition: transform 160ms ease, filter 160ms ease;
       }
+      button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+      button:disabled { cursor: wait; opacity: 0.58; }
       .primary { background: linear-gradient(135deg, var(--accent), #1fcf7a); color: #081019; }
       .secondary { background: rgba(89, 166, 255, 0.16); color: var(--text); border: 1px solid rgba(89, 166, 255, 0.35); }
       .danger { background: rgba(255, 107, 122, 0.14); color: #ffd9de; border: 1px solid rgba(255, 107, 122, 0.35); }
@@ -171,21 +179,25 @@
   <body>
     <div class="shell">
       <div class="hero">
-        <section class="card">
-          <p class="hint">TechSphere Voice Agent · consola viva de conocimiento</p>
-          <h1>Gestiona el corpus clínico desde una sola vista.</h1>
+        <section class="card relative overflow-hidden border-emerald-300/20 bg-slate-950/70 p-7 md:p-9">
+          <div class="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-emerald-300/10 blur-3xl"></div>
+          <p class="hint relative uppercase tracking-[0.16em] text-emerald-200/80">TechSphere · conocimiento vivo</p>
+          <h1 class="relative max-w-2xl">Mantén actualizado el criterio clínico del agente.</h1>
           <p class="lede">Sube un documento, verifica que quedó procesado y elimínalo cuando deba olvidarse. La consola habla con el backend y actualiza el índice en caliente.</p>
           <div class="chips">
-            <span class="chip">Subir documento</span>
-            <span class="chip">Listar documentos</span>
+            <span class="chip border-emerald-300/20 bg-emerald-300/10">Subir documento</span>
+            <span class="chip border-sky-300/20 bg-sky-300/10">Listar documentos</span>
             <span class="chip">Eliminar documento</span>
             <span class="chip">Procesado y disponible</span>
           </div>
         </section>
 
-        <aside class="card">
-          <h3>Estado</h3>
-          <div id="statusBox" class="status">Cargando estado del índice...</div>
+        <aside class="card border-sky-300/20 bg-slate-950/70 p-6">
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <h3 class="mb-0">Estado del índice</h3>
+            <span class="badge available border border-emerald-300/20 bg-emerald-300/10"><span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span> Activo</span>
+          </div>
+          <div id="statusBox" class="status border-slate-700/70 bg-slate-900/70">Cargando estado del índice...</div>
           <div class="hint" style="margin-top: 12px;">
             La interfaz acepta PDFs o TXT. Los PDFs escaneados se rechazan porque aún no hay OCR.
           </div>
@@ -193,11 +205,12 @@
       </div>
 
       <div class="grid">
-        <section class="card span-5">
+        <section class="card span-5 border-slate-700/80 bg-slate-950/75 p-6 md:p-7">
+          <p class="hint mb-1 uppercase tracking-[0.14em] text-slate-500">Actualización en caliente</p>
           <h2>Subir documento</h2>
           <form id="uploadForm">
             <label for="fileInput">Archivo</label>
-            <input id="fileInput" name="file" type="file" accept=".pdf,.txt" />
+            <input id="fileInput" class="border-slate-700 bg-slate-900/80 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-300/15 file:px-3 file:py-2 file:font-semibold file:text-emerald-100" name="file" type="file" accept=".pdf,.txt" />
             <div class="actions" style="margin-top: 14px;">
               <button class="primary" type="submit">Procesar y guardar</button>
               <button class="secondary" type="button" id="refreshButton">Actualizar lista</button>
@@ -206,7 +219,7 @@
           <div id="uploadMessage" class="status hidden"></div>
         </section>
 
-        <section class="card span-7">
+        <section class="card span-7 border-slate-700/80 bg-slate-950/75 p-6 md:p-7">
           <div class="row">
             <div>
               <h2 style="margin-bottom: 6px;">Documentos administrados</h2>

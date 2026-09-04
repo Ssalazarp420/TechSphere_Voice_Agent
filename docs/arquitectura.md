@@ -87,6 +87,24 @@ flowchart TD
 - `backend/agent/`: orquestación de la respuesta y selección de referencias.
 - `backend/call/`: sesiones, historial, resumen y métricas de llamada.
 - `frontend/`: interfaces web para administración y llamada.
+- **Sistema visual frontend**: ambas interfaces usan Tailwind CSS vía CDN, con tipografía
+  compartida, superficies responsive, estados de operación y controles visuales
+  consistentes. Esta capa no modifica los contratos de API ni la lógica de interacción.
+
+## Mejora visual del frontend
+
+Se realizó un rediseño de las dos superficies para acercarlas a una interfaz de producto
+lista para demo y operación:
+
+- `frontend/call.html` ahora separa visualmente el estado de la llamada, la conversación,
+  el turno actual, las referencias RAG y el resumen de sesión.
+- `frontend/admin.html` presenta con mayor claridad el estado del índice, la actualización
+  de documentos y la lista de conocimiento administrado.
+- Ambas páginas comparten Tailwind CSS, `DM Sans`, `Space Grotesk`, estados de foco,
+  feedback de interacción y composición responsive.
+- Tailwind se carga por CDN porque estas páginas son HTML estático y el repositorio no
+  necesita un proyecto Node para funcionar. No se añadió a `requirements.txt`, ya que no
+  es una dependencia de Python.
 
 ## Observaciones de diseño
 
