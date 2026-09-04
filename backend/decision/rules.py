@@ -200,7 +200,36 @@ _PAIN_WORD_VALUES = {
     "nueve": 9.0,
     "diez": 10.0,
 }
-_PAIN_WORD_PATTERN = re.compile(r"\bun[oa]?\s+(" + "|".join(_PAIN_WORD_VALUES) + r")\b")
+# Conectores que pueden preceder a un nivel de dolor escrito en palabras.
+# Antes solo se aceptaba "un/uno/una" ("el dolor está en un ocho"), así que
+# las demás formas naturales de decirlo en voz —"dolor de nueve", "el dolor
+# es de nueve", "dolor nivel nueve", "me duele como nueve"— no extraían
+# ningún valor y el turno caía a verde pese a ser un dolor severo. Medido
+# antes del arreglo: de seis formas de decir "dolor de nueve", cinco daban
+# pain_value=None y label=verde.
+_PAIN_WORD_CONNECTORS = r"(?:un[oa]?|de|en|como|nivel|sobre|es)"
+
+# Un número escrito en palabras seguido de una unidad de tiempo es una
+# DURACIÓN, no una intensidad: "me duele hace tres días" no es un dolor de 3.
+# Sin esta guarda, ampliar los conectores introduce ese falso positivo.
+_PAIN_TIME_UNIT = r"(?:d[ií]as?|semanas?|horas?|meses|mes|minutos?|noches?|veces|a[nñ]os?)"
+
+# "un"/"una" quedan fuera de la alternancia de VALORES aunque valgan 1: en
+# "el dolor está en un nueve" hacen de artículo, no de cifra, y al estar en la
+# lista el motor casaba "en un" y devolvía 1.0 en vez de seguir hasta "nueve".
+# Por eso el artículo se admite aparte, como paso opcional entre el conector y
+# el valor. "uno" sí se conserva: como numeral no es ambiguo.
+_PAIN_WORD_NUMERALS = sorted(
+    (word for word in _PAIN_WORD_VALUES if word not in {"un", "una"}),
+    key=len,
+    reverse=True,
+)
+
+_PAIN_WORD_PATTERN = re.compile(
+    r"\b" + _PAIN_WORD_CONNECTORS + r"\s+(?:un[oa]?\s+)?("
+    + "|".join(_PAIN_WORD_NUMERALS)
+    + r")\b(?!\s+" + _PAIN_TIME_UNIT + r")"
+)
 # Separador de cláusulas que NO corta dentro de un número decimal: sin el
 # lookaround, "38.1°C" se partía en cláusulas "38" y "1°c" por el punto
 # decimal, y el regex de número solo veía "38" — perdiendo el decimal (no
@@ -282,7 +311,10 @@ def classify_report(text: str) -> dict[str, object]:
         keyword for keyword in YELLOW_FLAG_KEYWORDS if keyword in lowered and not _is_negated(lowered, keyword)
     ]
 
-    pain_value = _extract_numeric_value(lowered, ["dolor", "pain"], allow_pain_words=True)
+    # "duele"/"duelen" además de "dolor": la cláusula se descarta antes de
+    # buscar el número si no contiene ninguna keyword, así que "me duele como
+    # nueve" no llegaba siquiera a evaluarse.
+    pain_value = _extract_numeric_value(lowered, ["dolor", "duele", "duelen", "pain"], allow_pain_words=True)
     temperature_value = _extract_numeric_value(lowered, ["fiebre", "temperatura", "temp"])
 
     has_reassurance = any(pattern in lowered for pattern in REASSURANCE_PATTERNS)
