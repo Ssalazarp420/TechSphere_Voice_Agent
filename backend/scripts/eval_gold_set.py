@@ -42,6 +42,29 @@ def _worst_label(labels: list[str]) -> str:
     return max(labels, key=lambda label: SEVERITY.get(label, 0))
 
 
+def _load_patient_contexts(dataset_dir: Path) -> dict[str, dict[str, object]]:
+    """paciente_id -> contexto clínico. Devuelve {} si los datasets de pacientes
+    no están disponibles, para que el eval siga corriendo sin ellos."""
+    try:
+        root_dir = Path(__file__).resolve().parents[2]
+        if str(root_dir) not in sys.path:
+            sys.path.insert(0, str(root_dir))
+        from backend.patients.lookup import PatientLookupService
+
+        service = PatientLookupService(root_dir=root_dir)
+        service._load()
+        contexts: dict[str, dict[str, object]] = {}
+        for row in service._clinical or []:
+            paciente_id = str(row.get("paciente_id"))
+            context = service.get_patient_context(paciente_id)
+            if context:
+                contexts[paciente_id] = context
+        return contexts
+    except Exception as exc:  # pragma: no cover - el eval no debe caerse por esto
+        print(f"Aviso: no se pudo cargar el contexto de pacientes ({exc}). Se evalúa solo con el texto.")
+        return {}
+
+
 def run_eval(dataset_path: Path, capa: str, classify_report) -> dict[str, object]:
     import pandas as pd
 
@@ -54,13 +77,25 @@ def run_eval(dataset_path: Path, capa: str, classify_report) -> dict[str, object
     false_negatives: list[dict[str, object]] = []  # ground truth rojo, predicho otra cosa: la falla catastrófica
     per_case_detail: list[dict[str, object]] = []
 
+    # Contexto clínico por paciente, para poder evaluar reglas que dependen del
+    # perfil de riesgo y no solo del texto del turno. `dia_postop` viene en el
+    # propio gold-set; el resto (procedimiento, edad, comorbilidades) se une por
+    # paciente_id contra los datasets de pacientes.
+    patient_contexts = _load_patient_contexts(dataset_path.parent)
+
     for caso_id, group in df.groupby("caso_id"):
         ground_truth = group["label_ground_truth"].iloc[0]
         patient_turns = group[group["hablante"] == "paciente"].sort_values("turno_idx")
 
+        paciente_id = str(group["paciente_id"].iloc[0])
+        contexto = dict(patient_contexts.get(paciente_id) or {})
+        dia_postop = group["dia_postop"].iloc[0]
+        if dia_postop is not None and not pd.isna(dia_postop):
+            contexto["dias_postop"] = int(dia_postop)
+
         turn_labels: list[str] = []
         for _, row in patient_turns.iterrows():
-            decision = classify_report(str(row["texto"]))
+            decision = classify_report(str(row["texto"]), patient_context=contexto or None)
             turn_labels.append(decision["label"])
 
         predicted = _worst_label(turn_labels)

@@ -111,7 +111,7 @@ class CallOrchestrator:
         limit: int = 3,
     ) -> dict[str, object]:
         remote_prompt = None
-        decision = classify_report(user_text)
+        decision = classify_report(user_text, patient_context=patient_context)
 
         # No se recupera del corpus cuando el turno no aporta contenido clínico
         # (un saludo, una pregunta al agente, "más o menos, ahí vamos"). Antes
