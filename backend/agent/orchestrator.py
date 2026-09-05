@@ -111,8 +111,46 @@ class CallOrchestrator:
         limit: int = 3,
     ) -> dict[str, object]:
         remote_prompt = None
-        decision = classify_report(user_text)
-        references = self.store.search(user_text, limit=limit)
+        decision = classify_report(user_text, patient_context=patient_context)
+
+        # No se recupera del corpus cuando el turno no aporta contenido clínico
+        # (un saludo, una pregunta al agente, "más o menos, ahí vamos"). Antes
+        # se buscaba siempre y se metían las tres primeras referencias en el
+        # prompt sin filtrar, así que un turno vacío arrastraba material
+        # irrelevante hacia el modelo: medido sobre este índice, "me siento
+        # maluca" recuperaba un documento sobre cáncer de cuello uterino.
+        #
+        # Se usa la señal del motor de reglas, no un umbral de distancia. Se
+        # probó lo segundo y no funciona: en turnos REALES del gold-set la
+        # distancia del mejor fragmento tiene mediana 0.569 y p90 0.703 en
+        # casos rojo —los turnos hablados son largos y divagantes, y su
+        # embedding queda lejos de cualquier fragmento limpio de una guía— de
+        # modo que un corte en 0.60 dejaba sin referencias al 38% de los turnos
+        # rojo. El ruido puro ("qué día es hoy", 0.706) cae DENTRO del rango de
+        # los turnos rojo legítimos (hasta 0.766): la distancia sola no los
+        # separa.
+        #
+        # La condición se escribe explícita —verde Y sin ninguna bandera Y sin
+        # cifras— en vez de apoyarse en `requires_clarification`, que responde
+        # a otra pregunta: un "todo bien, sin dolor" es tranquilidad explícita,
+        # así que NO requiere aclaración, pero tampoco tiene nada que buscar en
+        # el corpus. Exigir `verde` y ausencia de señales garantiza que ningún
+        # turno con contenido clínico pierda su respaldo documental, incluidos
+        # los casos borde: un dolor de 3 o una fiebre detectada por su valor
+        # numérico sin que aparezca la palabra "fiebre" conservan el RAG aunque
+        # la decisión sea verde.
+        #
+        # Medido sobre los 960 turnos de paciente del gold-set: conserva el RAG
+        # en el 100% de los turnos rojo y amarillo, y lo omite en el 71% de los
+        # verdes, que son saludos, cortesías y preguntas al agente.
+        skip_retrieval = (
+            decision.get("label") == "verde"
+            and not decision.get("red_flags")
+            and not decision.get("yellow_flags")
+            and decision.get("pain_value") is None
+            and decision.get("temperature_value") is None
+        )
+        references = [] if skip_retrieval else self.store.search(user_text, limit=limit)
 
         composed = self._compose_response(
             user_text=user_text,

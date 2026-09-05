@@ -106,9 +106,22 @@ class PatientLookupService:
         edad_raw = clinical.get("edad")
         edad = int(edad_raw) if edad_raw is not None else None
 
+        # Días transcurridos desde la cirugía. Es el dato que permite al motor
+        # de decisión distinguir un signo leve esperable en la recuperación
+        # temprana de uno que a la semana ya no lo es. En el gold-set el día
+        # viene explícito (columna `dia_postop`); en una llamada real hay que
+        # calcularlo, y esto es lo que lo calcula.
+        dias_postop = None
+        if fecha_cirugia:
+            try:
+                dias_postop = (date.today() - date.fromisoformat(fecha_cirugia)).days
+            except ValueError:
+                dias_postop = None
+
         return {
             "paciente_id": paciente_id,
             "nombre_completo": str(demo.get("nombre_completo", "")),
+            "dias_postop": dias_postop,
             "procedimiento": str(clinical.get("procedimiento", "")),
             "fecha_cirugia": fecha_cirugia,
             "edad": edad,

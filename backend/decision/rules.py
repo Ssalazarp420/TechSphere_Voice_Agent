@@ -4,6 +4,23 @@ import re
 from dataclasses import dataclass, asdict
 
 
+# Día de postoperatorio hasta el cual se considera "ventana temprana", donde
+# los signos leves son parte de la recuperación esperada y no de una
+# complicación.
+#
+# Se probaron tres ventanas contra el gold-set. Extenderla al día 3 da la mejor
+# accuracy (0.650 / 0.600 frente a 0.594 / 0.531), pero hace que se escapen 8
+# casos amarillo más: `amarillo -> verde` pasa de 3 a 11 en ambas capas. El día
+# 3 es precisamente donde la etiqueta real tiene más amarillos (30%), así que
+# descontar ahí los pierde.
+#
+# Se elige la ventana conservadora porque el criterio declarado del proyecto es
+# que el falso negativo es la falla grave, y tranquilizar a un paciente que
+# necesitaba seguimiento estrecho es un falso negativo. Cambiar 8 de ésos por
+# unos puntos de accuracy iría en contra de la asimetría que el resto del motor
+# aplica de forma deliberada.
+EARLY_POSTOP_DAYS = 2
+
 RED_FLAG_KEYWORDS = [
     "dificultad para respirar",
     "falta de aire",
@@ -365,6 +382,19 @@ _PURULENT_DRAINAGE_PATTERN = re.compile(
 )
 
 
+# --- Enrojecimiento dicho en diminutivo ---------------------------------------
+# YELLOW_FLAG_KEYWORDS solo tenía "enrojecimiento", "enrojecida" y "colorada".
+# Contando cómo lo dicen realmente los pacientes en el gold-set, esas tres
+# cubren 94 menciones y se quedan fuera 171: "rojita" (45), "rojo" (40),
+# "roja" (32), "rojito" (32), "rojez" (22). Es decir, se perdían dos de cada
+# tres menciones de un signo clásico de infección de sitio operatorio.
+#
+# Va como patrón y no como keyword porque el emparejamiento de keywords es por
+# subcadena, y "roja" como subcadena casa dentro de apellidos tan comunes como
+# "Rojas". Con \b delimitando la palabra, "rojas" ya no activa "roja".
+_WOUND_REDNESS_PATTERN = re.compile(r"\b(roj[ao]|rojit[ao]|rojez|enrojecidit[ao])\b")
+
+
 def _is_negated_before(lowered: str, start: int) -> bool:
     """¿Hay una negación entre el inicio de la oración y esta posición?
 
@@ -385,7 +415,17 @@ def _is_negated(lowered: str, keyword: str) -> bool:
     return False
 
 
-def classify_report(text: str) -> dict[str, object]:
+def classify_report(text: str, patient_context: dict[str, object] | None = None) -> dict[str, object]:
+    """Clasifica un reporte del paciente en verde / amarillo / rojo.
+
+    `patient_context` es el registro clínico del paciente (procedimiento, fecha
+    de cirugía, edad, comorbilidades) tal como lo devuelve
+    PatientLookupService.get_patient_context. Es opcional y por defecto no
+    altera el resultado: hasta ahora el historial solo alimentaba la redacción
+    de la respuesta, no la decisión, de modo que dos pacientes con perfiles de
+    riesgo muy distintos recibían la misma clasificación ante síntomas
+    idénticos.
+    """
     lowered = text.lower()
     red_flags = [keyword for keyword in RED_FLAG_KEYWORDS if keyword in lowered and not _is_negated(lowered, keyword)]
     yellow_flags = [
@@ -406,6 +446,14 @@ def classify_report(text: str) -> dict[str, object]:
         if temp_match and not _is_negated_before(lowered, temp_match.start()):
             temperature_value = float(temp_match.group(1).replace(",", "."))
 
+    redness_match = _WOUND_REDNESS_PATTERN.search(lowered)
+    if (
+        redness_match
+        and not _is_negated_before(lowered, redness_match.start())
+        and not any(f in yellow_flags for f in ("enrojecimiento", "enrojecida", "colorada"))
+    ):
+        yellow_flags = yellow_flags + ["enrojecimiento de la herida"]
+
     drainage_match = _PURULENT_DRAINAGE_PATTERN.search(lowered)
     if drainage_match and not _is_negated_before(lowered, drainage_match.start()):
         red_flags = red_flags + ["drenaje purulento (líquido amarillento en la herida)"]
@@ -413,13 +461,19 @@ def classify_report(text: str) -> dict[str, object]:
     has_reassurance = any(pattern in lowered for pattern in REASSURANCE_PATTERNS)
     ambiguous_hits = [marker for marker in AMBIGUOUS_MARKERS if marker in lowered]
 
-    score = 0
+    # El puntaje se separa en señales DURAS y BLANDAS para poder modular las
+    # segundas según el día de postoperatorio (ver la ventana temprana más
+    # abajo). Las duras —un signo de alarma, fiebre >=38, dolor severo— nunca
+    # se modulan: son anómalas en cualquier día del postoperatorio.
+    hard_score = 0
     if red_flags:
-        score += 3
+        hard_score += 3
     if temperature_value is not None and temperature_value >= 38.0:
-        score += 3
+        hard_score += 3
     if pain_value is not None and pain_value >= 8:
-        score += 2
+        hard_score += 2
+
+    score = 0
     # Antes: `if yellow_flags: score += 1` — un paciente con 1 síntoma amarillo
     # sumaba exactamente lo mismo que uno con 5 concurrentes (fiebre, escalofríos,
     # enrojecimiento, poco apetito, mal dormir). El eval mostró varios rojo reales
@@ -449,6 +503,38 @@ def classify_report(text: str) -> dict[str, object]:
     if is_ambiguous_signal:
         score += 1
         yellow_flags = yellow_flags + ["lenguaje ambiguo sin síntoma clínico identificado"]
+
+    # --- Ventana temprana del postoperatorio -------------------------------
+    # Febrícula, dolor moderado y molestias leves son parte de la recuperación
+    # esperada en los primeros días; los mismos signos a partir de la semana ya
+    # no lo son. Hasta aquí el motor puntuaba idéntico el día 2 y el día 14.
+    #
+    # Distribución real de la etiqueta por día en el gold-set:
+    #   día  1: rojo  0.0%   amarillo  7.5%   verde 92.5%
+    #   día  3: rojo  0.0%   amarillo 30.0%   verde 70.0%
+    #   día  7: rojo 15.0%   amarillo 25.0%   verde 60.0%
+    #   día 14: rojo 15.0%   amarillo  0.0%   verde 85.0%
+    # No hay un solo caso rojo antes del día 7, coherente con que una infección
+    # de sitio operatorio no se manifiesta a las 24 horas.
+    #
+    # Por eso en la ventana temprana se descuenta UN punto, y solo de las
+    # señales blandas. Nunca de las duras: una fiebre de 39 o un drenaje
+    # purulento en el día 2 siguen escalando igual, porque son anómalos
+    # cualquier día. El descuento no puede bajar de cero.
+    dias_postop = None
+    if patient_context:
+        raw_dias = patient_context.get("dias_postop")
+        if raw_dias is not None:
+            try:
+                dias_postop = int(raw_dias)
+            except (TypeError, ValueError):
+                dias_postop = None
+
+    early_window = dias_postop is not None and dias_postop <= EARLY_POSTOP_DAYS
+    if early_window:
+        score = max(0, score - 1)
+
+    score += hard_score
 
     # Un reporte sin ninguna palabra reconocible (ni de alarma, ni ambigua, ni
     # de tranquilidad) tampoco es evidencia de que todo esté bien — es

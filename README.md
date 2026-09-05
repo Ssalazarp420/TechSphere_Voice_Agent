@@ -202,6 +202,12 @@ más abajo. Lo que queda pendiente hoy es más específico:
 
 - Diagrama de arquitectura: [docs/arquitectura.md](docs/arquitectura.md)
 - Informe final: [docs/informe-final.md](docs/informe-final.md)
+- Decisiones de RAG y criterio de escalamiento:
+  [docs/decisiones-rag-y-escalamiento.md](docs/decisiones-rag-y-escalamiento.md)
+  — qué recupera bien el RAG y qué no con lenguaje clínico ambiguo, por qué se
+  descartó el umbral de distancia, cómo se define el escalamiento a un humano,
+  y dónde se usa (y dónde no) el historial del paciente. Todas las cifras
+  medidas contra el gold-set.
 
 ## Estado actual
 
