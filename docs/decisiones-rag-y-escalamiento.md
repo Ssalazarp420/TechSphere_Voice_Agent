@@ -155,20 +155,84 @@ la decisión ya tomada y solo redacta cómo comunicarla al paciente.
 Eso significa que la decisión clínica es **reproducible**: el mismo texto
 produce siempre la misma etiqueta, y se puede auditar caso por caso.
 
-### El sistema de puntaje
+### El sistema de puntaje, explicado
+
+Funciona como una **suma de puntos**. Cada síntoma que el agente detecta en lo
+que dijo el paciente aporta puntos; al final, el total decide el color.
+
+**Paso 1 — cada señal vale unos puntos**
+
+Las señales se dividen en dos grupos, y esta división es la que hace posible
+todo lo demás:
+
+**Señales DURAS** — anómalas en cualquier momento del postoperatorio:
 
 | Señal | Puntos |
 |---|---|
-| Bandera roja (pus, sangrado abundante, dificultad respiratoria, herida abierta…) | **+3** |
-| Temperatura ≥ 38 °C | **+3** |
-| Dolor ≥ 8/10 | +2 |
-| Banderas amarillas concurrentes | +1 cada una, **tope +3** |
-| Temperatura 37,5–38 °C | +1 |
-| Dolor 6–7,9 | +1 |
+| Bandera roja: pus, sangrado abundante, dificultad para respirar, herida abierta… | **+3** |
+| Fiebre de 38 °C o más | **+3** |
+| Dolor de 8 o más (escala 0-10) | **+2** |
+
+**Señales BLANDAS** — pueden ser parte de una recuperación normal:
+
+| Señal | Puntos |
+|---|---|
+| Banderas amarillas: enrojecimiento, hinchazón, náusea, poco apetito… | +1 por cada una, **tope +3** |
+| Febrícula: 37,5 a 37,9 °C | +1 |
+| Dolor moderado: de 6 a 7,9 | +1 |
 | Lenguaje ambiguo sin síntoma identificable | +1 |
 
-**Umbrales:** ≥ 3 → **rojo** (escalamiento inmediato) · 1–2 → **amarillo**
-(seguimiento estrecho) · 0 → **verde**
+**Paso 2 — se suma todo y el total decide el color**
+
+| Total | Color | Qué significa |
+|---|---|---|
+| **3 o más** | 🔴 **Rojo** | Escalamiento inmediato a un humano |
+| **1 o 2** | 🟡 **Amarillo** | Seguimiento estrecho, el agente indaga más |
+| **0** | 🟢 **Verde** | Sin signos de alarma |
+
+**Tres ejemplos completos** *(los puntajes están verificados contra el código)*
+
+> *"El dolor está en un 6 y la herida se ve rojita."*
+>
+> | Señal detectada | Tipo | Puntos |
+> |---|---|---|
+> | Dolor 6 (rango 6–7,9) | blanda | +1 |
+> | Enrojecimiento de la herida | blanda | +1 |
+> | | | **Total 2** |
+>
+> → 🟡 **amarillo** (entre 1 y 2)
+
+> *"Tengo fiebre de 39 y la herida me está botando pus."*
+>
+> | Señal detectada | Tipo | Puntos |
+> |---|---|---|
+> | Pus → bandera roja | **dura** | +3 |
+> | Temperatura 39 ≥ 38 °C | **dura** | +3 |
+> | La palabra "fiebre" → bandera amarilla | blanda | +1 |
+> | | | **Total 7** |
+>
+> → 🔴 **rojo** (3 o más)
+>
+> Nótese que la fiebre suma dos veces por vías distintas: como valor numérico
+> (+3, dura) y como palabra clave (+1, blanda). No es un error: el paciente
+> aportó dos evidencias del mismo hallazgo.
+
+> *"Tengo un poquito de fiebre, 37,6, algo de náusea y la herida está hinchada."*
+>
+> | Señal detectada | Tipo | Puntos |
+> |---|---|---|
+> | Fiebre + náusea + hinchazón → 3 banderas amarillas | blanda | +3 |
+> | Febrícula 37,6 (rango 37,5–37,9) | blanda | +1 |
+> | | | **Total 4** |
+>
+> → 🔴 **rojo**
+>
+> **Este es el ejemplo más interesante.** Ninguna señal aislada es grave: no hay
+> pus, ni fiebre alta, ni dolor severo. Pero tres síntomas moderados a la vez
+> son en sí mismos una señal de alarma. Antes, cualquier cantidad de banderas
+> amarillas sumaba un único punto, y este paciente se quedaba en amarillo. El
+> tope de +3 evita el extremo contrario: que una lista larga de molestias leves
+> dispare un rojo automático.
 
 ### Las cuatro decisiones de diseño defendibles
 
@@ -289,13 +353,51 @@ Ajustar pesos contra estos números sería aprender ruido invertido.
 | **2** | Comorbilidades y edad: diabetes y EPOC bajan el umbral ante signos de infección. Justificar clínicamente, **no ajustar contra el gold-set**. Dejar tras bandera `ENABLE_PATIENT_RISK_RULES=false` | **No — el dataset la contradice** |
 | **3** | Procedimiento → filtrado del RAG. Requiere un mapeo explícito de los 5 procedimientos a las categorías del corpus, porque `modulo_synthea` no coincide 1:1 con los nombres de carpeta | Parcialmente |
 
-### Resultado de las fases 0 y 1 (implementadas)
+### Cómo se implementó lo de los días (fases 0 y 1)
 
-El puntaje se separa en señales **duras** (signo de alarma, fiebre ≥ 38, dolor
-severo) y **blandas** (banderas amarillas, febrícula, dolor moderado, lenguaje
-ambiguo). En la ventana temprana se descuenta un punto, y **solo de las
-blandas**: una fiebre de 39 o un drenaje purulento en el día 2 siguen
-escalando igual, porque son anómalos cualquier día.
+**El problema en una frase:** el motor puntuaba exactamente igual una molestia
+en el día 2 que en el día 14. Pero una febrícula dos días después de una
+cirugía es recuperación normal; la misma febrícula dos semanas después ya no
+lo es.
+
+**La idea:** en los primeros días, **restar un punto — pero solo a las señales
+blandas**. Las duras nunca se tocan, porque una fiebre de 39 o pus en la
+herida son anómalos cualquier día.
+
+```
+                    ┌─────────────────────────────────────┐
+   señales DURAS ──▶│  nunca se modifican                 │──┐
+   (pus, ≥38°C,     │  +3, +3, +2                         │  │
+    dolor ≥8)       └─────────────────────────────────────┘  │
+                                                             ├──▶ TOTAL
+                    ┌─────────────────────────────────────┐  │
+   señales BLANDAS ▶│  día 1-2  →  se resta 1 punto       │──┘
+   (rojez, 37.6°C,  │  día 3+   →  se dejan igual         │
+    dolor 6-7)      └─────────────────────────────────────┘
+```
+
+**Qué cambia en la práctica:**
+
+| Lo que dice el paciente | Tipo | Día 2 | Día 14 |
+|---|---|---|---|
+| "la herida se ve un poquito rojita" | blanda | 🟢 verde | 🟡 amarillo |
+| "tengo 37,6 de temperatura" | blanda | 🟢 verde | 🟡 amarillo |
+| **"tengo fiebre de 39"** | **dura** | 🔴 **rojo** | 🔴 **rojo** |
+| **"la herida me supura pus"** | **dura** | 🔴 **rojo** | 🔴 **rojo** |
+
+Las dos primeras filas se relajan en la ventana temprana. Las dos últimas
+escalan igual, sin importar el día. **Eso es exactamente lo que se buscaba.**
+
+**Por qué el día se puede saber:** en el gold-set viene explícito en la
+columna `dia_postop`. En una llamada real se calcula restando `fecha_cirugia`
+a la fecha de hoy, en `backend/patients/lookup.py`.
+
+**Por qué se hizo en dos fases:** la fase 0 solo conectó el contexto del
+paciente al motor **sin cambiar ninguna regla**, y se verificó que el eval
+diera un resultado idéntico celda por celda. Ese control importa: sin él, una
+mejora posterior podría venir de un error de conexión en vez de la regla nueva.
+
+### Resultado medido
 
 | | Capa limpia | Capa ruidosa |
 |---|---|---|
