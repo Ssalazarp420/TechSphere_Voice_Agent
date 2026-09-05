@@ -284,11 +284,39 @@ Ajustar pesos contra estos números sería aprender ruido invertido.
 
 | Fase | Contenido | ¿Validable con el gold-set? |
 |---|---|---|
-| **0** | Habilitar la medición: `classify_report(text, patient_context=None)` y unir el eval con `paciente_id` + `dia_postop`, columnas que ya existen en el Excel | Prerrequisito |
-| **1** | Días de postoperatorio: bajar el peso de fiebre baja y dolor moderado en la ventana temprana (días 1-3), subirlo a partir del día 7 | **Sí — es donde está la ganancia** |
+| **0** ✅ | Habilitar la medición: `classify_report(text, patient_context=None)` y unir el eval con `paciente_id` + `dia_postop`, columnas que ya existen en el Excel | Prerrequisito |
+| **1** ✅ | Días de postoperatorio: descontar un punto a las señales blandas en la ventana temprana | **Sí — implementada, ver abajo** |
 | **2** | Comorbilidades y edad: diabetes y EPOC bajan el umbral ante signos de infección. Justificar clínicamente, **no ajustar contra el gold-set**. Dejar tras bandera `ENABLE_PATIENT_RISK_RULES=false` | **No — el dataset la contradice** |
 | **3** | Procedimiento → filtrado del RAG. Requiere un mapeo explícito de los 5 procedimientos a las categorías del corpus, porque `modulo_synthea` no coincide 1:1 con los nombres de carpeta | Parcialmente |
 
-La fase 1 es la que puede mejorar la accuracy de verdad, atacando el
-sobre-triaje: hoy una fiebre de 37,6 en el día 2 puntúa igual que en el día
-14, cuando la primera es parte de la recuperación normal.
+### Resultado de las fases 0 y 1 (implementadas)
+
+El puntaje se separa en señales **duras** (signo de alarma, fiebre ≥ 38, dolor
+severo) y **blandas** (banderas amarillas, febrícula, dolor moderado, lenguaje
+ambiguo). En la ventana temprana se descuenta un punto, y **solo de las
+blandas**: una fiebre de 39 o un drenaje purulento en el día 2 siguen
+escalando igual, porque son anómalos cualquier día.
+
+| | Capa limpia | Capa ruidosa |
+|---|---|---|
+| **Accuracy** | 0,500 → **0,594** | 0,419 → **0,531** |
+| Recall de rojo | 0,75 (igual) | 0,667 (igual) |
+| rojo → verde | 0 (igual) | 0 (igual) |
+| verde → amarillo | 66 → **49** | 76 → **57** |
+| amarillo → verde | 1 → 3 | 2 → 3 |
+
+La accuracy sube ~9 y ~11 puntos atacando el sobre-triaje, sin tocar el recall
+de rojo ni reintroducir el error `rojo → verde`.
+
+**Sobre la ventana elegida.** Se probaron tres. Extenderla al día 3 da mejor
+accuracy (0,650 / 0,600) pero hace que **se escapen 8 casos amarillo más**
+(`amarillo → verde` pasa de 3 a 11): el día 3 es justo donde la etiqueta real
+tiene más amarillos (30 %). Se eligió la ventana conservadora porque el
+criterio declarado del proyecto es que el falso negativo es la falla grave, y
+tranquilizar a quien necesitaba seguimiento estrecho lo es. La constante
+`EARLY_POSTOP_DAYS` deja la decisión explícita y revisable.
+
+**Nota para la demo.** Los pacientes del dataset tienen cirugías de hace meses
+(83, 238 y 108 días), así que la ventana temprana no se activa con ellos y el
+comportamiento en vivo es idéntico al anterior. El cambio es seguro, pero no
+se verá salvo que se use un paciente con cirugía reciente.
