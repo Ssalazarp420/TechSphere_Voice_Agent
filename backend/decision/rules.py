@@ -365,6 +365,19 @@ _PURULENT_DRAINAGE_PATTERN = re.compile(
 )
 
 
+# --- Enrojecimiento dicho en diminutivo ---------------------------------------
+# YELLOW_FLAG_KEYWORDS solo tenía "enrojecimiento", "enrojecida" y "colorada".
+# Contando cómo lo dicen realmente los pacientes en el gold-set, esas tres
+# cubren 94 menciones y se quedan fuera 171: "rojita" (45), "rojo" (40),
+# "roja" (32), "rojito" (32), "rojez" (22). Es decir, se perdían dos de cada
+# tres menciones de un signo clásico de infección de sitio operatorio.
+#
+# Va como patrón y no como keyword porque el emparejamiento de keywords es por
+# subcadena, y "roja" como subcadena casa dentro de apellidos tan comunes como
+# "Rojas". Con \b delimitando la palabra, "rojas" ya no activa "roja".
+_WOUND_REDNESS_PATTERN = re.compile(r"\b(roj[ao]|rojit[ao]|rojez|enrojecidit[ao])\b")
+
+
 def _is_negated_before(lowered: str, start: int) -> bool:
     """¿Hay una negación entre el inicio de la oración y esta posición?
 
@@ -405,6 +418,14 @@ def classify_report(text: str) -> dict[str, object]:
         temp_match = _TEMPERATURE_VALUE_PATTERN.search(lowered)
         if temp_match and not _is_negated_before(lowered, temp_match.start()):
             temperature_value = float(temp_match.group(1).replace(",", "."))
+
+    redness_match = _WOUND_REDNESS_PATTERN.search(lowered)
+    if (
+        redness_match
+        and not _is_negated_before(lowered, redness_match.start())
+        and not any(f in yellow_flags for f in ("enrojecimiento", "enrojecida", "colorada"))
+    ):
+        yellow_flags = yellow_flags + ["enrojecimiento de la herida"]
 
     drainage_match = _PURULENT_DRAINAGE_PATTERN.search(lowered)
     if drainage_match and not _is_negated_before(lowered, drainage_match.start()):
